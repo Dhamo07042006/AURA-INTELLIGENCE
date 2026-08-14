@@ -1,0 +1,16 @@
+{
+  "anomaly_features": [
+    "Errors_Last_30_Days",
+    "Alarms_Last_30_Days",
+    "Warnings_Last_30_Days",
+    "Abnormal_Sensors_Last_30_Days",
+    "Battery_Errors_Last_30_Days",
+    "Power_Errors_Last_30_Days",
+    "Sensor_Errors_Last_30_Days",
+    "System_Resets_Last_30_Days",
+    "Average_Load_Percent",
+    "Peak_Load_Percent",
+    "Voltage_Fluctuation_Count"
+  ],
+  "contamination": 0.05
+}
