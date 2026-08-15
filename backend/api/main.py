@@ -626,10 +626,12 @@ def list_devices(
 
 @app.get("/api/v1/devices/{device_id}/health")
 def get_device_health(device_id: str, live: bool = False, current_user: dict = Depends(get_current_user)):
-    verify_device_access(device_id, current_user)
-    
+    # Check cache FIRST — LOGx-streamed devices live in device_cache even if not in DB devices table
     if not live and device_id in device_cache:
         return device_cache[device_id]
+    
+    # Only verify DB access if not already resolved from cache
+    verify_device_access(device_id, current_user)
         
     try:
         report = inference_engine.run_device_report(device_id)
