@@ -229,11 +229,9 @@ def seed_mock_data(conn):
             with open(cache_path, "r") as f:
                 cache = json.load(f)
             
-            # Seed first 150 devices from cache into demo-hospital
+            # Seed all trained dataset devices from cache into demo-hospital
             count = 0
             for dev_id, dev_data in cache.items():
-                if count >= 150:
-                    break
                 
                 dtype = sanitize_str(dev_data.get("device_type"), "Ventilator")
                 manufacturer = sanitize_str(dev_data.get("manufacturer"), "MedStar")

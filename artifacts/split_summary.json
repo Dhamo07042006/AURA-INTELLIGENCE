@@ -11,7 +11,7 @@
     "2024-06-23 00:00:00",
     "2026-08-13 00:00:00"
   ],
-  "train_count": 7711,
-  "val_count": 3427,
-  "test_count": 5283
+  "train_count": 7633,
+  "val_count": 3483,
+  "test_count": 5293
 }

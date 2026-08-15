@@ -78,6 +78,11 @@ export default function App() {
   const [liveLogs, setLiveLogs] = useState([]);
   const [isLiveLogsPaused, setIsLiveLogsPaused] = useState(false);
   const [liveStreamRate, setLiveStreamRate] = useState(0);
+  const [toasts, setToasts] = useState([]);
+  const [alertSearchQuery, setAlertSearchQuery] = useState('');
+  const [alertRiskFilter, setAlertRiskFilter] = useState('ALL');
+  const [alertPanelOpen, setAlertPanelOpen] = useState(false);
+  const [notificationInbox, setNotificationInbox] = useState([]); // persistent until resolved
 
   // ==========================================
   // MODULE 2: Dataset Upload & Mapping states
@@ -196,15 +201,70 @@ export default function App() {
         if (msg.type === 'DEVICE_UPDATE') {
           const updatedDev = msg.data;
           
-          // 1. Update list
-          setDeviceList(prev => prev.map(d => d.device_id === msg.device_id ? { ...d, ...updatedDev } : d));
+          // 1. Dynamic list update & prepend if new device
+          setDeviceList(prev => {
+            const exists = prev.some(d => d.device_id === msg.device_id);
+            if (exists) {
+              return prev.map(d => d.device_id === msg.device_id ? { ...d, ...updatedDev } : d);
+            } else {
+              return [updatedDev, ...prev];
+            }
+          });
           
-          // 2. Update current digital twin
+          // 2. Dynamic alerts state update
+          if (updatedDev.risk_level === 'HIGH' || updatedDev.risk_level === 'CRITICAL') {
+            const alertObj = {
+              alert_id: Date.now() + Math.random(),
+              device_id: msg.device_id,
+              device_type: updatedDev.device_type || "Medical Device",
+              manufacturer: updatedDev.manufacturer || "LOGx Streamer",
+              department: updatedDev.department || "General Ward",
+              risk_level: updatedDev.risk_level,
+              overall_health: updatedDev.overall_health,
+              failure_probability: updatedDev.failure_probability || 0.85,
+              root_cause: updatedDev.root_cause?.primary || "Component Drift",
+              recommended_action: updatedDev.maintenance?.recommended_action || "Check Equipment",
+              status: 'active'
+            };
+            setAlerts(prev => {
+              const exists = prev.some(a => a.device_id === msg.device_id);
+              if (exists) {
+                return prev.map(a => a.device_id === msg.device_id ? { ...a, ...alertObj } : a);
+              } else {
+                return [alertObj, ...prev];
+              }
+            });
+            
+            // Persist notification in inbox until user resolves
+            const notification = {
+              id: `${msg.device_id}_${Date.now()}`,
+              device_id: msg.device_id,
+              device_type: updatedDev.device_type || "Medical Device",
+              department: updatedDev.department || "General Ward",
+              risk_level: updatedDev.risk_level,
+              overall_health: updatedDev.overall_health,
+              failure_probability: updatedDev.failure_probability || 0.85,
+              recommended_action: updatedDev.maintenance?.recommended_action || "Schedule Immediate Maintenance",
+              root_cause: updatedDev.root_cause?.primary || "Component Drift",
+              timestamp: new Date().toLocaleTimeString(),
+              resolved: false
+            };
+            setNotificationInbox(prev => {
+              const exists = prev.some(n => n.device_id === msg.device_id && !n.resolved);
+              if (exists) {
+                return prev.map(n => n.device_id === msg.device_id && !n.resolved ? { ...n, ...notification } : n);
+              }
+              return [notification, ...prev].slice(0, 20);
+            });
+            setAlertPanelOpen(true);
+          }
+
+          // 3. Update current digital twin
           if (msg.device_id === selectedDeviceId) {
             setDeviceData(updatedDev);
           }
           
-          // 3. Track events rate
+          // 4. Track events rate
           setLiveStreamRate(prev => prev + 1);
           
           // 4. Append to logs viewer
@@ -799,6 +859,97 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Persistent Alert Notification Inbox Panel */}
+      <div style={{ position: 'fixed', top: 0, right: alertPanelOpen ? 0 : '-460px', width: '440px', height: '100vh', zIndex: 9999, background: 'rgba(10,15,30,0.97)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(239,68,68,0.3)', boxShadow: '-8px 0 40px rgba(0,0,0,0.6)', transition: 'right 0.35s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+        {/* Panel Header */}
+        <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239,68,68,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ShieldAlert size={20} color="#ef4444" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1em', color: 'white' }}>Failure Alert Inbox</div>
+              <div style={{ fontSize: '0.75em', color: '#94a3b8' }}>{notificationInbox.filter(n => !n.resolved).length} unresolved alerts</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {notificationInbox.filter(n => !n.resolved).length > 0 && (
+              <button
+                style={{ fontSize: '0.75em', color: '#64748b', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}
+                onClick={() => {
+                  setNotificationInbox(prev => prev.map(n => ({ ...n, resolved: true })));
+                  setAlerts(prev => prev.map(a => ({ ...a, status: 'acknowledged' })));
+                }}
+              >Resolve All</button>
+            )}
+            <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2em', padding: '4px 8px' }} onClick={() => setAlertPanelOpen(false)}>✕</button>
+          </div>
+        </div>
+
+        {/* Alert Cards List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {notificationInbox.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 20px' }}>
+              <CheckCircle size={32} color="#10b981" style={{ marginBottom: '10px' }} />
+              <p>No active failure alerts. All systems nominal.</p>
+            </div>
+          )}
+          {notificationInbox.map(n => (
+            <div
+              key={n.id}
+              style={{
+                background: n.resolved ? 'rgba(255,255,255,0.02)' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.08)' : 'rgba(249,115,22,0.08)'),
+                border: `1px solid ${n.resolved ? 'rgba(255,255,255,0.06)' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.35)' : 'rgba(249,115,22,0.35)')}`,
+                borderLeft: `4px solid ${n.resolved ? '#374151' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316')}`,
+                borderRadius: '10px',
+                padding: '14px',
+                opacity: n.resolved ? 0.45 : 1,
+                transition: 'opacity 0.3s'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '0.82em', color: n.resolved ? '#64748b' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316'), display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <ShieldAlert size={13} />
+                  {n.resolved ? '✓ RESOLVED' : `${n.risk_level} FAILURE ALERT`}
+                </span>
+                <span style={{ fontSize: '0.72em', color: '#64748b' }}>{n.timestamp}</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.98em', color: 'white', marginBottom: '4px' }}>{n.device_id}</div>
+              <div style={{ fontSize: '0.78em', color: '#94a3b8', marginBottom: '2px' }}>{n.device_type} • {n.department}</div>
+              <div style={{ fontSize: '0.78em', color: '#cbd5e1', marginBottom: '10px' }}>⚕️ {n.recommended_action}</div>
+              {!n.resolved && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    style={{ flex: 1, background: 'rgba(59,130,246,0.15)', border: '1px solid #3b82f6', color: '#60a5fa', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                    onClick={() => { setSelectedDeviceId(n.device_id); setActiveTab('twin'); setAlertPanelOpen(false); }}
+                  >
+                    <Eye size={12} /> Inspect Twin
+                  </button>
+                  <button
+                    style={{ flex: 1, background: 'rgba(16,185,129,0.15)', border: '1px solid #10b981', color: '#34d399', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600 }}
+                    onClick={() => {
+                      setNotificationInbox(prev => prev.map(x => x.id === n.id ? { ...x, resolved: true } : x));
+                      setAlerts(prev => prev.map(a => a.device_id === n.device_id ? { ...a, status: 'acknowledged' } : a));
+                    }}
+                  >
+                    ✓ Resolve
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Alert Bell Trigger Button (fixed bottom-right corner) */}
+      {notificationInbox.filter(n => !n.resolved).length > 0 && !alertPanelOpen && (
+        <button
+          onClick={() => setAlertPanelOpen(true)}
+          style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 9998, width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #ef4444, #dc2626)', border: '2px solid rgba(239,68,68,0.5)', boxShadow: '0 0 20px rgba(239,68,68,0.5), 0 4px 20px rgba(0,0,0,0.4)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', animation: 'pulse 2s infinite' }}
+        >
+          <ShieldAlert size={22} color="white" />
+          <span style={{ color: 'white', fontSize: '0.65em', fontWeight: 700 }}>{notificationInbox.filter(n => !n.resolved).length}</span>
+        </button>
+      )}
+
       {/* Sidebar Navigation */}
       <div className="sidebar">
         <div style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
@@ -816,7 +967,7 @@ export default function App() {
               onClick={() => setActiveTab('dashboard')}
             >
               <Activity size={18} />
-              <span>Executive Dashboard</span>
+              <span>Monitoring Dashboard</span>
             </button>
           )}
           {hasPageAccess('explorer') && (
@@ -961,16 +1112,36 @@ export default function App() {
       {/* Main Panel */}
       <div className="main-content">
         
-        {/* EXECUTIVE DASHBOARD */}
+        {/* MONITORING DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: '2em' }}>Operations Overview</h1>
-                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Real-time stats for {hospitalName}</p>
+                <h1 style={{ margin: 0, fontSize: '2em' }}>Monitoring Dashboard</h1>
+                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Real-time equipment telemetry monitoring & ML predictions for {hospitalName}</p>
               </div>
-              <div style={{ background: 'rgba(59,130,246,0.1)', padding: '10px 18px', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)' }}>
-                <span style={{ fontSize: '0.85em', color: '#60a5fa', fontWeight: 600 }}>SYSTEM STATUS: DEPLOYED</span>
+              
+              {/* Live Log Stream Connection Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {streamStatus?.running || connectStatus === 'Connected' || liveLogs.length > 0 ? (
+                  <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px 18px', borderRadius: '8px', color: '#10b981', fontWeight: 600, fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }}></span>
+                    <span>🟢 LIVE LOG MONITORING & ML PREDICTIONS ACTIVE</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', padding: '8px 14px', borderRadius: '8px', color: '#ef4444', fontWeight: 600, fontSize: '0.8em' }}>
+                      🔴 STREAM OFFLINE
+                    </div>
+                    <button
+                      className="primary"
+                      style={{ fontSize: '0.8em', padding: '8px 14px' }}
+                      onClick={() => { setActiveTab('hospital_connect'); startReplayStream(); }}
+                    >
+                      ⚡ Connect Live Log Stream
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1058,6 +1229,58 @@ export default function App() {
                 </div>
               </div>
 
+            </div>
+
+            {/* Live Ingestion Telemetry Stream Table on Monitoring Dashboard */}
+            <div className="glass-card" style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Activity size={20} color="#10b981" />
+                  <h3 style={{ margin: 0 }}>Live Telemetry Ingestion Feed & ML Failure Predictions</h3>
+                </div>
+                <span style={{ fontSize: '0.8em', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                  ● Live Telemetry Active ({liveLogs.length} events received)
+                </span>
+              </div>
+              <div style={{ maxHeight: '240px', overflowY: 'auto', fontSize: '0.85em' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8' }}>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Time</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Device ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Type</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Health Score</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>Failure Risk</th>
+                      <th style={{ padding: '8px', textAlign: 'left' }}>ML Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {liveLogs.slice(0, 10).map((log, i) => (
+                      <tr key={log.log_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <td style={{ padding: '8px', color: '#64748b' }}>{log.timestamp}</td>
+                        <td style={{ padding: '8px', fontWeight: 600, color: '#60a5fa' }}>{log.device_id}</td>
+                        <td style={{ padding: '8px' }}>{log.device_type}</td>
+                        <td style={{ padding: '8px', color: getHealthColor(log.overall_health) }}>{log.overall_health}%</td>
+                        <td style={{ padding: '8px' }}>{getRiskBadge(log.risk_level)}</td>
+                        <td style={{ padding: '8px', color: '#94a3b8' }}>
+                          {log.risk_level === 'CRITICAL' || log.risk_level === 'HIGH' ? (
+                            <span style={{ color: '#ef4444', fontWeight: 600 }}>🚨 High Failure Risk - Immediate Action Required</span>
+                          ) : (
+                            <span style={{ color: '#10b981' }}>✔ Nominal Telemetry Stream</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {liveLogs.length === 0 && (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                          Listening for live telemetry logs from LOGx streamer...
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -1621,13 +1844,59 @@ export default function App() {
         {/* REAL-TIME ALERTS */}
         {activeTab === 'alerts' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '2em' }}>Fleet Real-Time Alerts</h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Active risks requiring biomedical response</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h1 style={{ margin: 0, fontSize: '2em' }}>Fleet Real-Time Alerts</h1>
+                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Active risks requiring biomedical response</p>
+              </div>
+              <span className="badge badge-critical" style={{ fontSize: '0.9em' }}>
+                {alerts.filter(a => a.status === 'active').length} Active Alerts
+              </span>
+            </div>
+
+            {/* Interactive Alert Search Panel */}
+            <div className="glass-card" style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={18} color="#64748b" style={{ position: 'absolute', left: '12px' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search alert by Device ID (e.g. DEV075958), Device Type, or Department..." 
+                  value={alertSearchQuery} 
+                  onChange={e => setAlertSearchQuery(e.target.value)}
+                  style={{ width: '100%', paddingLeft: '40px' }}
+                />
+              </div>
+              <select 
+                value={alertRiskFilter} 
+                onChange={e => setAlertRiskFilter(e.target.value)}
+                style={{ width: '180px' }}
+              >
+                <option value="ALL">All Risk Levels</option>
+                <option value="CRITICAL">CRITICAL Risk</option>
+                <option value="HIGH">HIGH Risk</option>
+              </select>
+              <button 
+                className="primary" 
+                style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                onClick={() => fetchAlerts()}
+              >
+                <Search size={16} />
+                <span>Search Alerts</span>
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {alerts.map(dev => (
+              {alerts.filter(dev => {
+                const matchesRisk = alertRiskFilter === 'ALL' || dev.risk_level === alertRiskFilter;
+                const q = alertSearchQuery.toLowerCase().trim();
+                const matchesSearch = !q || 
+                  (dev.device_id && dev.device_id.toLowerCase().includes(q)) ||
+                  (dev.device_type && dev.device_type.toLowerCase().includes(q)) ||
+                  (dev.department && dev.department.toLowerCase().includes(q)) ||
+                  (dev.primary_root_cause && dev.primary_root_cause.toLowerCase().includes(q)) ||
+                  (dev.root_cause && dev.root_cause.toLowerCase().includes(q));
+                return matchesRisk && matchesSearch;
+              }).map(dev => (
                 <div 
                   key={dev.alert_id}
                   className={`glass-card ${dev.risk_level === 'CRITICAL' ? 'risk-critical' : 'risk-high'}`}
@@ -1638,7 +1907,7 @@ export default function App() {
                     <div>
                       <div style={{ fontWeight: 'bold', fontSize: '1.1em' }}>{dev.device_id} ({dev.department})</div>
                       <div style={{ fontSize: '0.85em', color: '#cbd5e1', marginTop: '4px' }}>
-                        Issue: {dev.root_cause} • Prob: {Math.round(dev.failure_probability*100)}% • Anomaly Score: {dev.anomaly_score}%
+                        Issue: {dev.root_cause || dev.primary_root_cause || "Component Failure Risk"} • Prob: {Math.round((dev.failure_probability || 0.85)*100)}% • Anomaly Score: {dev.anomaly_score || 75.0}%
                       </div>
                       <div style={{ fontSize: '0.85em', color: '#94a3b8', marginTop: '4px' }}>
                         Action: {dev.recommended_action}
@@ -1646,18 +1915,25 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button 
+                      className="primary" 
+                      style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid #3b82f6', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                      onClick={() => { setSelectedDeviceId(dev.device_id); setActiveTab('twin'); }}
+                    >
+                      <Eye size={14} /> Inspect Twin
+                    </button>
                     {dev.risk_level === 'CRITICAL' && dev.status === 'active' && (
                       <button className="primary" style={{ background: '#3b82f6' }} onClick={() => triggerAutoAdvisor(dev.device_id)}>
-                        Ask AI Maintenance Advisor
+                        Ask AI Advisor
                       </button>
                     )}
                     {dev.status === 'active' ? (
                       <button className="primary" style={{ background: '#10b981' }} onClick={() => acknowledgeAlert(dev.alert_id)}>
-                        Acknowledge Alert
+                        Acknowledge
                       </button>
                     ) : (
-                      <span style={{ fontSize: '0.85em', color: '#64748b', fontWeight: 600 }}>Acknowledged</span>
+                      <span style={{ fontSize: '0.85em', color: '#64748b', fontWeight: 600 }}>✓ Acknowledged</span>
                     )}
                   </div>
                 </div>
