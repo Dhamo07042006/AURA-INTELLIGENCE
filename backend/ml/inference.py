@@ -172,7 +172,7 @@ class MedicalDeviceInferenceEngine:
         
         return features
 
-    def run_device_report(self, device_id, T=None):
+    def run_device_report(self, device_id, T=None, live_payload=None):
         self.load_models()
         
         if T is None:
@@ -185,6 +185,10 @@ class MedicalDeviceInferenceEngine:
         features_dict = self._build_live_feature_row(device_id, T)
         if features_dict is None:
             return {"error": f"Device {device_id} not found in the registry."}
+            
+        if live_payload:
+            from backend.services.inference_worker import update_features_with_telemetry
+            features_dict = update_features_with_telemetry(features_dict, live_payload)
             
         # Format feature row matching training columns
         feature_cols = self.schema["features"]

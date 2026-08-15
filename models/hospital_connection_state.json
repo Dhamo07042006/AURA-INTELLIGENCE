@@ -1,0 +1,34 @@
+{
+  "hospital_name": "Metro General Hospital",
+  "department": "Intensive Care Unit (ICU)",
+  "connection_type": "CSV",
+  "status": "Connected",
+  "connected_count": 4,
+  "last_update": "2026-08-14T22:44:07Z",
+  "devices": [
+    {
+      "device_id": "DEV002119",
+      "device_type": "Ventilator",
+      "department": "Intensive Care Unit (ICU)",
+      "status": "Monitoring"
+    },
+    {
+      "device_id": "DEV000001",
+      "device_type": "Syringe pump",
+      "department": "Intensive Care Unit (ICU)",
+      "status": "Monitoring"
+    },
+    {
+      "device_id": "DEV000042",
+      "device_type": "Patient monitor",
+      "department": "Intensive Care Unit (ICU)",
+      "status": "Monitoring"
+    },
+    {
+      "device_id": "DEV000018",
+      "device_type": "Defibrillator",
+      "department": "Intensive Care Unit (ICU)",
+      "status": "Monitoring"
+    }
+  ]
+}

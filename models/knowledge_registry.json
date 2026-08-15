@@ -1,0 +1,61 @@
+{
+  "documents": [
+    {
+      "document_id": "DOC_959D68B7",
+      "filename": "Ventilator_Service_Manual.txt",
+      "filepath": "C:\\Users\\Dhamodaran G\\Desktop\\CTS\\data\\knowledge_base\\DOC_959D68B7.txt",
+      "device_type": "Ventilator",
+      "manufacturer": "MedStar Systems",
+      "version": "2.1",
+      "upload_date": "2026-08-14T22:30:20Z",
+      "status": "enabled",
+      "chunk_count": 1,
+      "chunks": [
+        {
+          "chunk_id": "DOC_959D68B7_0",
+          "section": "Battery Maintenance & Power",
+          "text": "Ventilator Service Instruction: For battery degradation, check the power connectors, replace the battery unit with model VM-202 if charge is under 40%, and recalibrate the system sensor inputs on Page 12, Section 3.2.",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "document_id": "DOC_58141010",
+      "filename": "Ventilator_Service_Manual.txt",
+      "filepath": "C:\\Users\\Dhamodaran G\\Desktop\\CTS\\data\\knowledge_base\\DOC_58141010.txt",
+      "device_type": "Ventilator",
+      "manufacturer": "MedStar Systems",
+      "version": "2.1",
+      "upload_date": "2026-08-14T22:30:47Z",
+      "status": "enabled",
+      "chunk_count": 1,
+      "chunks": [
+        {
+          "chunk_id": "DOC_58141010_0",
+          "section": "Battery Maintenance & Power",
+          "text": "Ventilator Service Instruction: For battery degradation, check the power connectors, replace the battery unit with model VM-202 if charge is under 40%, and recalibrate the system sensor inputs on Page 12, Section 3.2.",
+          "page": 1
+        }
+      ]
+    },
+    {
+      "document_id": "DOC_A0F54B97",
+      "filename": "Ventilator_Service_Manual.txt",
+      "filepath": "C:\\Users\\Dhamodaran G\\Desktop\\CTS\\data\\knowledge_base\\DOC_A0F54B97.txt",
+      "device_type": "Ventilator",
+      "manufacturer": "MedStar Systems",
+      "version": "2.1",
+      "upload_date": "2026-08-14T22:31:43Z",
+      "status": "enabled",
+      "chunk_count": 1,
+      "chunks": [
+        {
+          "chunk_id": "DOC_A0F54B97_0",
+          "section": "Battery Maintenance & Power",
+          "text": "Ventilator Service Instruction: For battery degradation, check the power connectors, replace the battery unit with model VM-202 if charge is under 40%, and recalibrate the system sensor inputs on Page 12, Section 3.2.",
+          "page": 1
+        }
+      ]
+    }
+  ]
+}

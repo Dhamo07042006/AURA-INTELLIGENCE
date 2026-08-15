@@ -54,3 +54,7 @@ artifacts/data_audit_report.html
 node_modules/
 frontend/node_modules/
 frontend/dist/
+.env
+*.db
+data/uploaded_datasets/
+data/knowledge_base/
