@@ -271,21 +271,26 @@ export default function App() {
           // 4. Track events rate
           setLiveStreamRate(prev => prev + 1);
           
-          // 4. Append to logs viewer
+          // 4. Append to logs viewer — store FULL ML prediction data
           if (!isLiveLogsPaused) {
             const newLog = {
               log_id: Date.now() + Math.random().toString(),
               device_id: msg.device_id,
-              device_type: updatedDev.device_type,
+              device_type: updatedDev.device_type || 'Medical Device',
+              department: updatedDev.department || 'General Ward',
               timestamp: new Date().toLocaleTimeString(),
-              payload: JSON.stringify(updatedDev),
-              validation_status: "VALID",
-              anomaly_status: updatedDev.anomaly?.status,
-              risk_level: updatedDev.risk_level,
-              overall_health: updatedDev.overall_health,
-              failure_probability: updatedDev.failure_probability
+              validation_status: 'VALID',
+              anomaly_status: updatedDev.anomaly?.status || 'Normal',
+              anomaly_score: updatedDev.anomaly?.score || 0,
+              risk_level: updatedDev.risk_level || 'LOW',
+              overall_health: updatedDev.overall_health || 100,
+              failure_probability: updatedDev.failure_probability || 0,
+              root_cause: updatedDev.root_cause?.primary || 'None',
+              recommended_action: updatedDev.maintenance?.recommended_action || 'Nominal monitoring',
+              rul_days: updatedDev.predicted_failure_time_days || null,
+              _fullData: updatedDev
             };
-            setLiveLogs(prev => [newLog, ...prev].slice(0, 100));
+            setLiveLogs(prev => [newLog, ...prev].slice(0, 200));
           }
           
           // 5. Refresh aggregates
@@ -1270,31 +1275,55 @@ export default function App() {
               </div>
             </div>
 
-            {/* KPI Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-              <div className="glass-card risk-critical" style={{ borderLeft: '4px solid #ef4444' }}>
-                <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>CRITICAL RISK</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0' }}>{alerts.filter(d=>d.risk_level==='CRITICAL' && d.status === 'active').length}</div>
-                <div style={{ fontSize: '0.85em', color: '#f87171' }}>Requires immediate replacement</div>
-              </div>
-              <div className="glass-card risk-high" style={{ borderLeft: '4px solid #f97316' }}>
-                <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>HIGH RISK</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0' }}>{alerts.filter(d=>d.risk_level==='HIGH' && d.status === 'active').length}</div>
-                <div style={{ fontSize: '0.85em', color: '#fb923c' }}>Schedule maintenance within 7 days</div>
-              </div>
-              <div className="glass-card" style={{ borderLeft: '4px solid #f59e0b' }}>
-                <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>WARNING RISK</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0' }}>{alerts.filter(d=>d.risk_level==='MEDIUM' && d.status === 'active').length}</div>
-                <div style={{ fontSize: '0.85em', color: '#fbbf24' }}>Monitored parameter drift</div>
-              </div>
-              <div className="glass-card" style={{ borderLeft: '4px solid #10b981' }}>
-                <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>FLEET HEALTH SCORE</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0' }}>
-                  {deviceList.length > 0 ? (deviceList.reduce((acc, d) => acc + d.overall_health, 0) / deviceList.length).toFixed(1) + '%' : '94.2%'}
+            {/* KPI Cards Grid — counts from ALL sources: DB alerts + live streamed devices */}
+            {(() => {
+              // Combine alerts state + recent liveLogs for accurate real-time KPIs
+              const activeLiveIds = new Set(alerts.filter(a => a.status === 'active').map(a => a.device_id));
+              // Unique CRITICAL count: alerts + live stream
+              const criticalLive = liveLogs.filter(l => l.risk_level === 'CRITICAL' && !activeLiveIds.has(l.device_id));
+              const criticalCount = alerts.filter(d => d.risk_level === 'CRITICAL' && d.status === 'active').length
+                + new Set(criticalLive.map(l => l.device_id)).size;
+              const highLive = liveLogs.filter(l => l.risk_level === 'HIGH' && !activeLiveIds.has(l.device_id));
+              const highCount = alerts.filter(d => d.risk_level === 'HIGH' && d.status === 'active').length
+                + new Set(highLive.map(l => l.device_id)).size;
+              // MEDIUM from recent liveLogs
+              const mediumDevices = new Set(liveLogs.filter(l => l.risk_level === 'MEDIUM').map(l => l.device_id));
+              const mediumCount = mediumDevices.size;
+              // Fleet health: average of all deviceList + unique live devices
+              const liveDevHealthMap = {};
+              liveLogs.forEach(l => { liveDevHealthMap[l.device_id] = l.overall_health; });
+              const allHealthValues = [
+                ...deviceList.map(d => d.overall_health),
+                ...Object.values(liveDevHealthMap).filter(h => !deviceList.some(d => d.overall_health === h))
+              ].filter(h => typeof h === 'number' && !isNaN(h));
+              const fleetHealth = allHealthValues.length > 0
+                ? (allHealthValues.reduce((s, h) => s + h, 0) / allHealthValues.length).toFixed(1)
+                : '94.2';
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+                  <div className="glass-card risk-critical" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>CRITICAL RISK</div>
+                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0', color: criticalCount > 0 ? '#ef4444' : 'inherit' }}>{criticalCount}</div>
+                    <div style={{ fontSize: '0.85em', color: '#f87171' }}>Requires immediate replacement</div>
+                  </div>
+                  <div className="glass-card risk-high" style={{ borderLeft: '4px solid #f97316' }}>
+                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>HIGH RISK</div>
+                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0', color: highCount > 0 ? '#f97316' : 'inherit' }}>{highCount}</div>
+                    <div style={{ fontSize: '0.85em', color: '#fb923c' }}>Schedule maintenance within 7 days</div>
+                  </div>
+                  <div className="glass-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>WARNING (MEDIUM)</div>
+                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0', color: mediumCount > 0 ? '#f59e0b' : 'inherit' }}>{mediumCount}</div>
+                    <div style={{ fontSize: '0.85em', color: '#fbbf24' }}>Monitored parameter drift</div>
+                  </div>
+                  <div className="glass-card" style={{ borderLeft: '4px solid #10b981' }}>
+                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>FLEET HEALTH SCORE</div>
+                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0' }}>{fleetHealth}%</div>
+                    <div style={{ fontSize: '0.85em', color: '#34d399' }}>Live ML-averaged across {allHealthValues.length} devices</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.85em', color: '#34d399' }}>Above baseline target of 92.0%</div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Layout Split */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
@@ -1356,50 +1385,89 @@ export default function App() {
 
             </div>
 
-            {/* Live Ingestion Telemetry Stream Table on Monitoring Dashboard */}
+            {/* Live Ingestion Telemetry Stream Table — Real ML Prediction Results */}
             <div className="glass-card" style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Activity size={20} color="#10b981" />
-                  <h3 style={{ margin: 0 }}>Live Telemetry Ingestion Feed & ML Failure Predictions</h3>
+                  <h3 style={{ margin: 0 }}>Live ML Predictions — Real-time Telemetry Feed</h3>
                 </div>
-                <span style={{ fontSize: '0.8em', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
-                  ● Live Telemetry Active ({liveLogs.length} events received)
-                </span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75em', color: '#94a3b8' }}>
+                    {liveLogs.filter(l => l.risk_level === 'CRITICAL').length > 0 && (
+                      <span style={{ color: '#ef4444', fontWeight: 700, marginRight: '8px' }}>🔴 {liveLogs.filter(l => l.risk_level === 'CRITICAL').length} CRITICAL</span>
+                    )}
+                    {liveLogs.filter(l => l.risk_level === 'HIGH').length > 0 && (
+                      <span style={{ color: '#f97316', fontWeight: 700, marginRight: '8px' }}>🟠 {liveLogs.filter(l => l.risk_level === 'HIGH').length} HIGH</span>
+                    )}
+                    <span style={{ color: '#10b981' }}>🟢 {liveLogs.filter(l => l.risk_level === 'LOW').length} LOW</span>
+                  </span>
+                  <span style={{ fontSize: '0.8em', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
+                    ● {liveLogs.length} logs received
+                  </span>
+                </div>
               </div>
-              <div style={{ maxHeight: '240px', overflowY: 'auto', fontSize: '0.85em' }}>
+              <div style={{ maxHeight: '320px', overflowY: 'auto', fontSize: '0.82em' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Time</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Device ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Type</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Health Score</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Failure Risk</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>ML Recommendation</th>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', color: '#64748b', fontSize: '0.8em', position: 'sticky', top: 0, background: 'rgba(15,23,42,0.95)' }}>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Time</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Device ID</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Type / Dept</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Health</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Risk</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Anomaly</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Root Cause (ML)</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {liveLogs.slice(0, 10).map((log, i) => (
-                      <tr key={log.log_id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                        <td style={{ padding: '8px', color: '#64748b' }}>{log.timestamp}</td>
-                        <td style={{ padding: '8px', fontWeight: 600, color: '#60a5fa' }}>{log.device_id}</td>
-                        <td style={{ padding: '8px' }}>{log.device_type}</td>
-                        <td style={{ padding: '8px', color: getHealthColor(log.overall_health) }}>{log.overall_health}%</td>
-                        <td style={{ padding: '8px' }}>{getRiskBadge(log.risk_level)}</td>
-                        <td style={{ padding: '8px', color: '#94a3b8' }}>
-                          {log.risk_level === 'CRITICAL' || log.risk_level === 'HIGH' ? (
-                            <span style={{ color: '#ef4444', fontWeight: 600 }}>🚨 High Failure Risk - Immediate Action Required</span>
-                          ) : (
-                            <span style={{ color: '#10b981' }}>✔ Nominal Telemetry Stream</span>
-                          )}
+                    {liveLogs.slice(0, 20).map((log, i) => (
+                      <tr
+                        key={log.log_id || i}
+                        style={{
+                          borderBottom: '1px solid rgba(255,255,255,0.03)',
+                          background: log.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.05)' : log.risk_level === 'HIGH' ? 'rgba(249,115,22,0.04)' : 'transparent',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => { setSelectedDeviceId(log.device_id); if (log._fullData) setDeviceData(log._fullData); setActiveTab('twin'); }}
+                        title="Click to open Digital Twin"
+                      >
+                        <td style={{ padding: '7px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>{log.timestamp}</td>
+                        <td style={{ padding: '7px 6px', fontWeight: 700, color: log.risk_level === 'CRITICAL' ? '#f87171' : '#60a5fa' }}>{log.device_id}</td>
+                        <td style={{ padding: '7px 6px' }}>
+                          <div style={{ fontWeight: 500 }}>{log.device_type}</div>
+                          <div style={{ fontSize: '0.8em', color: '#64748b' }}>{log.department}</div>
+                        </td>
+                        <td style={{ padding: '7px 6px', fontWeight: 700, color: getHealthColor(log.overall_health) }}>
+                          {log.overall_health != null ? log.overall_health.toFixed(1) + '%' : '—'}
+                        </td>
+                        <td style={{ padding: '7px 6px' }}>{getRiskBadge(log.risk_level)}</td>
+                        <td style={{ padding: '7px 6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ width: '50px', height: '5px', borderRadius: '3px', background: '#1e293b', overflow: 'hidden' }}>
+                              <div style={{ width: `${log.anomaly_score || 0}%`, height: '100%', background: (log.anomaly_score || 0) > 60 ? '#ef4444' : (log.anomaly_score || 0) > 35 ? '#f97316' : '#10b981' }}></div>
+                            </div>
+                            <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{log.anomaly_score != null ? log.anomaly_score.toFixed(0) : '—'}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '7px 6px', color: log.risk_level === 'CRITICAL' ? '#f87171' : log.risk_level === 'HIGH' ? '#fb923c' : '#94a3b8', fontWeight: log.risk_level === 'CRITICAL' ? 700 : 400 }}>
+                          {log.root_cause || '—'}
+                        </td>
+                        <td style={{ padding: '7px 6px', color: log.risk_level === 'CRITICAL' || log.risk_level === 'HIGH' ? '#fbbf24' : '#10b981', maxWidth: '180px', fontSize: '0.8em' }}>
+                          {log.risk_level === 'CRITICAL' ? '🚨 ' : log.risk_level === 'HIGH' ? '⚠️ ' : '✔ '}{log.recommended_action || 'Nominal'}
+                          {log.rul_days && log.rul_days < 30 ? <span style={{ color: '#ef4444', fontWeight: 700, marginLeft: '4px' }}> [{log.rul_days}d]</span> : null}
                         </td>
                       </tr>
                     ))}
                     {liveLogs.length === 0 && (
                       <tr>
-                        <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                          Listening for live telemetry logs from LOGx streamer...
+                        <td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <Activity size={28} color="#334155" />
+                            <div>Waiting for live telemetry from LOGx streamer...</div>
+                            <div style={{ fontSize: '0.85em' }}>Start the LOGx generator to see real-time ML predictions here</div>
+                          </div>
                         </td>
                       </tr>
                     )}
