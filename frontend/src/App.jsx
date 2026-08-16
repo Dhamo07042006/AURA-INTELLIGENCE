@@ -82,8 +82,7 @@ export default function App() {
   const [alertSearchQuery, setAlertSearchQuery] = useState('');
   const [alertRiskFilter, setAlertRiskFilter] = useState('ALL');
   const [alertPanelOpen, setAlertPanelOpen] = useState(false);
-  const [notificationInbox, setNotificationInbox] = useState([]); // persistent until resolved
-  const alertsSeededRef = useRef(false); // prevent re-opening panel on every poll
+  const [notificationInbox, setNotificationInbox] = useState([]); // persistent until resolved, populated exclusively by real-time telemetry ML predictions
 
   // ==========================================
   // MODULE 2: Dataset Upload & Mapping states
@@ -444,40 +443,6 @@ export default function App() {
       const res = await authFetch(`${API_BASE}/alerts`);
       const data = await res.json();
       setAlerts(data);
-
-      // Seed notification inbox from API alerts (for CRITICAL/HIGH that existed before WS connection)
-      const activeHighCritical = data.filter(a => a.status === 'active' && (a.risk_level === 'CRITICAL' || a.risk_level === 'HIGH'));
-      if (activeHighCritical.length > 0) {
-        setNotificationInbox(prev => {
-          const existingIds = new Set(prev.map(n => n.device_id));
-          const newNotifs = activeHighCritical
-            .filter(a => !existingIds.has(a.device_id))
-            .map(a => ({
-              id: `db_${a.alert_id || a.device_id}_${Date.now()}`,
-              device_id: a.device_id,
-              device_type: a.device_type || 'Medical Device',
-              department: a.department || 'General Ward',
-              risk_level: a.risk_level,
-              overall_health: a.overall_health || 14.2,
-              failure_probability: a.failure_probability || 0.85,
-              recommended_action: a.recommended_action || 'Inspect Equipment',
-              root_cause: a.root_cause || a.primary_root_cause || 'Component Drift',
-              timestamp: a.created_at ? new Date(a.created_at).toLocaleTimeString() : new Date().toLocaleTimeString(),
-              resolved: false,
-              _fromDB: true
-            }));
-          if (newNotifs.length > 0) {
-            // Only auto-open on first load, not on every poll
-            if (!alertsSeededRef.current) {
-              setAlertPanelOpen(true);
-              alertsSeededRef.current = true;
-            }
-            return [...newNotifs, ...prev].slice(0, 20);
-          }
-          if (!alertsSeededRef.current) alertsSeededRef.current = true;
-          return prev;
-        });
-      }
     } catch (e) {
       console.error("Error fetching alerts:", e);
     }
