@@ -237,6 +237,7 @@ export default function App() {
             });
             
             // Persist notification in inbox until user resolves
+            // Store the FULL ML report so Inspect Twin shows real data
             const notification = {
               id: `${msg.device_id}_${Date.now()}`,
               device_id: msg.device_id,
@@ -247,8 +248,10 @@ export default function App() {
               failure_probability: updatedDev.failure_probability || 0.85,
               recommended_action: updatedDev.maintenance?.recommended_action || "Schedule Immediate Maintenance",
               root_cause: updatedDev.root_cause?.primary || "Component Drift",
+              anomaly_score: updatedDev.anomaly?.score || 0,
               timestamp: new Date().toLocaleTimeString(),
-              resolved: false
+              resolved: false,
+              _fullData: updatedDev  // ← full ML inference result from LOGx telemetry
             };
             setNotificationInbox(prev => {
               const exists = prev.some(n => n.device_id === msg.device_id && !n.resolved);
@@ -988,33 +991,50 @@ export default function App() {
                 <span style={{ fontSize: '0.72em', color: '#64748b' }}>{n.timestamp}</span>
               </div>
               <div style={{ fontWeight: 700, fontSize: '0.98em', color: 'white', marginBottom: '4px' }}>{n.device_id}</div>
-              <div style={{ fontSize: '0.78em', color: '#94a3b8', marginBottom: '2px' }}>{n.device_type} • {n.department}</div>
+              <div style={{ fontSize: '0.78em', color: '#94a3b8', marginBottom: '4px' }}>{n.device_type} • {n.department}</div>
+              {/* Real ML prediction data */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.72em', background: 'rgba(239,68,68,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  Health: {n.overall_health?.toFixed(1) ?? '—'}%
+                </span>
+                <span style={{ fontSize: '0.72em', background: 'rgba(249,115,22,0.15)', color: '#fb923c', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  Fail Prob: {n.failure_probability ? Math.round(n.failure_probability * 100) : '—'}%
+                </span>
+                {n.anomaly_score > 0 && (
+                  <span style={{ fontSize: '0.72em', background: 'rgba(168,85,247,0.15)', color: '#c084fc', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                    Anomaly: {n.anomaly_score?.toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.78em', color: '#f87171', marginBottom: '2px', fontWeight: 600 }}>⚠ Root Cause: {n.root_cause || '—'}</div>
               <div style={{ fontSize: '0.78em', color: '#cbd5e1', marginBottom: '10px' }}>⚕️ {n.recommended_action}</div>
               {!n.resolved && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     style={{ flex: 1, background: 'rgba(59,130,246,0.15)', border: '1px solid #3b82f6', color: '#60a5fa', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                     onClick={() => {
-                      // Pre-populate deviceData from notification so twin tab shows immediately
-                      const previewData = {
+                      // Use real ML inference data if available from WebSocket broadcast
+                      // Otherwise fall back to notification fields
+                      const realData = n._fullData;
+                      const previewData = realData ? {
+                        ...realData,
+                        device_id: n.device_id,
+                        department: realData.department || n.department || 'General Ward',
+                        _fromLiveStream: true
+                      } : {
+                        // Fallback for DB-sourced notifications (no _fullData)
                         device_id: n.device_id,
                         device_type: n.device_type || 'Medical Device',
                         department: n.department || 'General Ward',
                         manufacturer: 'LOGx External Streamer',
-                        model: 'V-100',
                         risk_level: n.risk_level,
                         overall_health: n.overall_health || 14.2,
                         failure_probability: n.failure_probability || 0.85,
-                        anomaly: { score: 75.0, status: 'Abnormal' },
+                        anomaly: { score: n.anomaly_score || 75.0, status: 'Abnormal' },
                         root_cause: { primary: n.root_cause || 'Component Drift', confidence: 0.88 },
                         maintenance: { recommended_action: n.recommended_action || 'Inspect Equipment' },
-                        components: {
-                          Battery: { health: n.overall_health || 14.2, status: 'Critical' },
-                          Sensors: { health: 72.0, status: 'Warning' },
-                          Power_Supply: { health: 60.0, status: 'Warning' }
-                        },
+                        components: { Battery: { health: n.overall_health || 14.2, status: 'Critical' } },
                         rul_days: 7,
-                        rul_confidence: 0.88,
                         last_updated: new Date().toISOString(),
                         _synthetic: true
                       };
@@ -1022,7 +1042,7 @@ export default function App() {
                       setSelectedDeviceId(n.device_id);
                       setActiveTab('twin');
                       setAlertPanelOpen(false);
-                      // Also try fetching the real backend data to upgrade if available
+                      // Fetch latest from backend to get most up-to-date ML result
                       fetchDeviceDetails(n.device_id);
                     }}
                   >
