@@ -1,324 +1,286 @@
 ====================================================================================================
-EXTERNAL MEDICAL EQUIPMENT LOG GENERATOR WEBSITE & SIMULATOR - TECHNICAL SPECIFICATION & CODE BLUEPRINT
+EXTERNAL MEDICAL EQUIPMENT LOG GENERATOR WEBSITE — COMPLETE BLUEPRINT & PROMPT SPECIFICATION
 ====================================================================================================
 Project Target Platform: AURA AI-Powered Medical Device Reliability Intelligence Platform
-Document Purpose       : Complete blueprint, data schemas, API endpoints, and source code to build a 
-                         standalone External Hospital Equipment Log Generator Website that runs on a 
-                         separate machine/server and streams live telemetry logs into the AURA platform.
+Document Version       : 3.5 (Updated with Exact Required Input Parameters & Real-Time ML Triggering)
+Document Purpose       : Complete build blueprint for Antigravity AI to generate the standalone 
+                         External Log Generator Website that streams real-time telemetry into AURA.
 ====================================================================================================
 
-1. SYSTEM ARCHITECTURE & OVERVIEW
+1. CENTRAL AURA SERVER ENDPOINT & HEADERS
 ----------------------------------------------------------------------------------------------------
-The External Medical Equipment Log Generator is a standalone web application designed to run on a 
-separate PC, server, or cloud instance. It simulates physical medical devices installed across hospital 
-departments (ICU, Radiology, Clinical Lab, Operating Room) and streams live telemetry logs, sensor 
-readings, error codes, and operational telemetry over HTTP REST API or MQTT / WebSockets into the 
-central AURA platform.
+Target Server Base URL: http://<AURA_SERVER_IP>:8000
 
-Architecture Flow:
-[ External Generator Machine ] ───( REST POST / MQTT )───► [ AURA Central Server: http://<IP>:8000 ]
-  (Simulates Ventilators,                                     (Processes Live ML Inference, Digital Twins,
-   Monitors, Scanners)                                         Alerts, SHAP, and RAG Advice)
+REST Ingestion Endpoint:
+  URL    : POST http://<AURA_SERVER_IP>:8000/api/v1/ingest/telemetry
+  Headers: 
+    Content-Type : application/json
+    X-API-Key    : aura_live_ingest_key_2026
+    Hospital-ID  : demo-hospital
 
 
-2. CENTRAL AURA SERVER ENDPOINTS & CONNECTION PARAMETERS
+2. REQUIRED INPUT PARAMETERS FOR EXTERNAL LOG GENERATOR PAYLOAD
 ----------------------------------------------------------------------------------------------------
-Central Server Base URL: http://<AURA_SERVER_IP>:8000
+To ensure AURA's ML models predict with 100% accuracy in real time, configure the generator website 
+to send HTTP POST requests with the following JSON schema:
 
-A) REST Ingestion Endpoint:
-   - URL    : POST http://<AURA_SERVER_IP>:8000/api/v1/ingest/telemetry
-   - Headers: 
-       Content-Type : application/json
-       X-API-Key    : aura_live_ingest_key_2026
-       Hospital-ID  : demo-hospital (or target hospital_id)
+Parameter Name    | Data Type | Accepted Values / Format                 | ML Feature Mapping
+------------------+-----------+------------------------------------------+--------------------------------------
+hospital_id       | string    | "demo-hospital"                          | Multi-tenant hospital scoping
+device_id         | string    | e.g. "DEV000001" (Range: DEV000001–DEV009434)| Device registry & historical lookup
+device_type       | string    | "Ventilator", "Patient monitor",         | Component ontology & baseline
+                  |           | "CT scanner", "MRI scanner",             |
+                  |           | "Infusion pump", "Defibrillator", etc.   |
+department        | string    | "Intensive Care Unit (ICU)",             | Department risk aggregation
+                  |           | "Radiology Department",                  |
+                  |           | "Clinical Laboratory",                   |
+                  |           | "Operating Rooms (OR)", "General Ward"   |
+timestamp         | string    | ISO-8601 UTC (e.g. "2026-08-16T15:30:00Z")| Time-series feature calculation
+battery_health    | float     | 0.0 to 100.0 (%)                         | Approx_Battery_Health feature
+temperature       | float     | 30.0 to 65.0 (°C)                        | Average_Temperature_C feature
+load_percent      | float     | 0.0 to 100.0 (%)                         | Peak_Load_Percent feature
+error_code        | string    | "OK", "BAT_CRITICAL", "TEMP_CRITICAL",   | Error frequency feature injection
+                  |           | "SENSOR_ERR", "POWER_FLUC", "SYS_RESET"  |
+operating_hours   | float     | e.g. 1200.5 (hours)                      | Approx_Operating_Hours feature
+voltage           | float     | 10.0 to 28.0 (V)                         | Voltage_Fluctuation_Count feature
+humidity          | float     | 20.0 to 90.0 (%) (Optional)              | Average_Humidity_Percent feature
+battery_cycles    | integer   | e.g. 240 (Optional)                      | Approx_Battery_Cycles feature
+days_since_maint  | integer   | e.g. 30 (Optional)                       | Days_Since_Last_Maintenance feature
 
-B) MQTT Broker Endpoint:
-   - Host   : <AURA_SERVER_IP>
-   - Port   : 1883
-   - Topic  : hospital/demo-hospital/telemetry
 
-C) WebSocket Real-time Endpoint:
-   - URL    : ws://<AURA_SERVER_IP>:8000/api/v1/realtime/devices?token=<JWT_TOKEN>
-
-
-3. EXACT TELEMETRY LOG JSON PAYLOAD SCHEMAS
+3. ERROR CODES — REAL-TIME ML FEATURE INJECTION RULES
 ----------------------------------------------------------------------------------------------------
-Your external log generator website must output telemetry payloads in the following JSON format:
+ERROR CODE      | ML FEATURES INJECTED BY AURA BACKEND             | PREDICTED RISK LEVEL RESULT
+----------------+--------------------------------------------------+-----------------------------------
+"OK"            | Nominal baseline — uses raw battery/temp/load    | LOW Risk (No notification)
+"BAT_WARN"      | Battery_Errors_Last_7_Days += 1                  | MEDIUM Warning
+"BAT_CRITICAL"  | Battery_Errors_Last_7_Days += 10, Alarms += 5    | 🚨 CRITICAL (Triggers Inbox Alert)
+"TEMP_WARN"     | Alarms_Last_7_Days += 3                          | MEDIUM / HIGH Warning
+"TEMP_CRITICAL" | Alarms_Last_7_Days += 5                          | 🚨 CRITICAL (Triggers Inbox Alert)
+"SENSOR_ERR"    | Sensor_Errors_Last_7_Days += 10, Abnormal += 10 | 🚨 HIGH / CRITICAL
+"POWER_FLUC"    | Power_Errors_Last_7_Days += 8, VoltageFluc += 12 | 🚨 HIGH / CRITICAL
+"SYS_RESET"     | System_Resets_Last_7_Days += 5                   | 🚨 HIGH / CRITICAL
 
-Example 1: Ventilator Log Payload
+
+4. TELEMETRY PAYLOAD EXAMPLES FOR GENERATOR CONFIGURATION
+----------------------------------------------------------------------------------------------------
+
+A) Normal Telemetry Payload (Predicts LOW Risk — Nominal Stream):
 {
   "hospital_id": "demo-hospital",
-  "device_id": "DEV000001",
+  "device_id": "DEV000025",
   "device_type": "Ventilator",
   "department": "Intensive Care Unit (ICU)",
-  "timestamp": "2026-08-15T23:30:00Z",
-  "battery_health": 88.5,
-  "temperature": 37.2,
-  "load_percent": 65.0,
+  "timestamp": "2026-08-16T15:30:00Z",
+  "battery_health": 92.5,
+  "temperature": 36.8,
+  "load_percent": 62.0,
   "error_code": "OK",
-  "operating_hours": 1420.5,
+  "operating_hours": 1200.0,
   "voltage": 23.8
 }
 
-Example 2: Patient Monitor Failure Log Payload (Battery Degradation Scenario)
+B) Battery Critical Payload (Triggers CRITICAL Risk & Inbox Notification):
 {
   "hospital_id": "demo-hospital",
-  "device_id": "DEV000005",
-  "device_type": "Patient monitor",
+  "device_id": "DEV000025",
+  "device_type": "Ventilator",
   "department": "Intensive Care Unit (ICU)",
-  "timestamp": "2026-08-15T23:30:05Z",
-  "battery_health": 22.1,
-  "temperature": 42.8,
-  "load_percent": 92.0,
+  "timestamp": "2026-08-16T15:30:05Z",
+  "battery_health": 14.2,
+  "temperature": 37.4,
+  "load_percent": 88.0,
   "error_code": "BAT_CRITICAL",
-  "operating_hours": 3800.0,
-  "voltage": 18.2
+  "operating_hours": 4800.0,
+  "voltage": 18.5
 }
 
-Supported Error Codes for ML Anomaly Triggering:
-- "OK"           : Normal operation
-- "BAT_WARN"     : Low battery health warning
-- "BAT_CRITICAL" : Critical battery failure risk
-- "TEMP_WARN"    : Elevated component temperature
-- "TEMP_CRITICAL": High thermal failure risk
-- "SENSOR_ERR"   : Sensor calibration drift or failure
-- "POWER_FLUC"   : Power supply voltage fluctuation
-- "SYS_RESET"    : Microcontroller system reset event
+C) Thermal Overheating Payload (Triggers CRITICAL Risk & Inbox Notification):
+{
+  "hospital_id": "demo-hospital",
+  "device_id": "DEV000010",
+  "device_type": "CT scanner",
+  "department": "Radiology Department",
+  "timestamp": "2026-08-16T15:30:10Z",
+  "battery_health": 75.0,
+  "temperature": 54.2,
+  "load_percent": 96.0,
+  "error_code": "TEMP_CRITICAL",
+  "operating_hours": 3200.0,
+  "voltage": 21.0
+}
 
 
-4. REQUIRED EXTERNAL LOG GENERATOR WEBSITE USER INTERFACE FEATURES
+5. STANDALONE SINGLE-FILE HTML LOG GENERATOR CODE (RUNNABLE ON ANY SYSTEM)
 ----------------------------------------------------------------------------------------------------
-When building the external log generator website UI, include the following controls:
-
-1. Target Server Connection Panel:
-   - Input Box: Central AURA Server IP / Host (e.g., 192.168.1.100 or localhost)
-   - Input Box: Port (Default: 8000)
-   - Input Box: Hospital ID (Default: demo-hospital)
-   - Status Badge: Connected / Disconnected
-
-2. Device Generator Controls:
-   - Device Selector: DEV000001 to DEV009434
-   - Device Type Dropdown: Ventilator, Patient monitor, CT scanner, MRI scanner, Infusion pump, EKG
-   - Department Dropdown: Intensive Care Unit (ICU), Radiology, Clinical Lab, Operating Room
-
-3. Failure Simulation Injector:
-   - Normal Operation Mode (Randomized healthy telemetry)
-   - Battery Degradation Mode (Gradually drops battery health to 15% and emits BAT_CRITICAL)
-   - Thermal Overheating Mode (Ramps component temperature to 48°C and emits TEMP_CRITICAL)
-   - Sensor Failure Mode (Injects random noise & SENSOR_ERR codes)
-   - Power Instability Mode (Fluctuates voltage & emits POWER_FLUC)
-
-4. Log Streaming Controls:
-   - Interval Selector: 1 second, 3 seconds, 5 seconds, 10 seconds
-   - Buttons: "Start Log Stream", "Pause Stream", "Inject Instant Failure Alert", "Stop Stream"
-   - Live Raw Terminal Console: Auto-scrolling text console showing outgoing JSON HTTP requests
-
-
-5. COMPLETE RUNNABLE STANDALONE PYTHON SCRIPT FOR SEPARATE SYSTEM
-----------------------------------------------------------------------------------------------------
-You can save the following standalone script as `external_hospital_log_generator.py` on ANY 
-separate machine or laptop, install `requests`, and run it to stream live telemetry into AURA:
-
-```python
-import time
-import json
-import random
-import datetime
-import requests
-
-# CONFIGURE TARGET CENTRAL AURA PLATFORM SERVER IP HERE
-AURA_SERVER_IP = "127.0.0.1"  # Replace with actual IP of machine running AURA (e.g. 192.168.1.50)
-AURA_PORT = "8000"
-HOSPITAL_ID = "demo-hospital"
-
-INGEST_URL = f"http://{AURA_SERVER_IP}:{AURA_PORT}/api/v1/ingest/telemetry"
-API_KEY = "aura_live_ingest_key_2026"
-
-DEVICES = [
-    {"id": "DEV000001", "type": "Ventilator", "dept": "Intensive Care Unit (ICU)"},
-    {"id": "DEV000002", "type": "Patient monitor", "dept": "Intensive Care Unit (ICU)"},
-    {"id": "DEV000003", "type": "CT scanner", "dept": "Radiology Department"},
-    {"id": "DEV000004", "type": "Infusion pump", "dept": "General Ward"},
-    {"id": "DEV000005", "type": "ECG machine", "dept": "Clinical Laboratory"}
-]
-
-SCENARIOS = ["OK", "BAT_WARN", "BAT_CRITICAL", "TEMP_CRITICAL", "SENSOR_ERR", "POWER_FLUC"]
-
-def generate_telemetry_log(device, force_scenario=None):
-    scenario = force_scenario if force_scenario else random.choice(["OK", "OK", "OK", "OK", random.choice(SCENARIOS)])
-    
-    bat_health = round(random.uniform(75.0, 99.0), 1)
-    temp = round(random.uniform(34.0, 38.0), 1)
-    error = "OK"
-    
-    if scenario == "BAT_CRITICAL":
-        bat_health = round(random.uniform(10.0, 25.0), 1)
-        error = "BAT_CRITICAL"
-    elif scenario == "TEMP_CRITICAL":
-        temp = round(random.uniform(43.0, 52.0), 1)
-        error = "TEMP_CRITICAL"
-    elif scenario == "SENSOR_ERR":
-        error = "SENSOR_ERR"
-    elif scenario == "POWER_FLUC":
-        error = "POWER_FLUC"
-
-    payload = {
-        "hospital_id": HOSPITAL_ID,
-        "device_id": device["id"],
-        "device_type": device["type"],
-        "department": device["dept"],
-        "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "battery_health": bat_health,
-        "temperature": temp,
-        "load_percent": round(random.uniform(40.0, 95.0), 1),
-        "error_code": error,
-        "operating_hours": round(random.uniform(500.0, 5000.0), 1)
-    }
-    return payload
-
-def main():
-    print("==========================================================================")
-    print(f"  EXTERNAL HOSPITAL MEDICAL LOG GENERATOR STARTING...")
-    print(f"  Target Server: {INGEST_URL}")
-    print(f"  Hospital ID  : {HOSPITAL_ID}")
-    print("==========================================================================")
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-        "Hospital-ID": HOSPITAL_ID
-    }
-
-    step = 0
-    while True:
-        step += 1
-        dev = random.choice(DEVICES)
-        
-        # Every 10th step, inject a simulated failure to trigger ML alerts
-        scenario = "BAT_CRITICAL" if step % 10 == 0 else None
-        log_payload = generate_telemetry_log(dev, force_scenario=scenario)
-
-        try:
-            res = requests.post(INGEST_URL, json=log_payload, headers=headers, timeout=3)
-            if res.status_code == 200:
-                data = res.json()
-                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ✅ Streamed Log for {dev['id']} ({dev['type']}) ➔ Status: {data.get('status')} | Anomaly Score: {data.get('anomaly_score')}")
-            else:
-                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ⚠️ Server returned HTTP {res.status_code}: {res.text}")
-        except Exception as e:
-            print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] ❌ Connection Failed: {e}")
-
-        time.sleep(3.0)  # Stream log every 3 seconds
-
-if __name__ == "__main__":
-    main()
-```
-
-
-6. COMPLETE STANDALONE SINGLE-FILE HTML/JS WEB APP FOR SEPARATE SYSTEM
-----------------------------------------------------------------------------------------------------
-You can also save the following code as `index.html` on any external machine and open it in a browser 
-to run a full graphical Log Generator Website:
+Save the code below as `index.html` on any system and open it in a browser:
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>External Medical Log Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOGx — AURA Medical Equipment Telemetry Simulator</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
-        .card { background: #1e293b; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-        input, select, button { padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; width: 100%; box-sizing: border-box; }
-        button { background: #3b82f6; border: none; cursor: pointer; font-weight: bold; }
-        button.stop { background: #ef4444; }
-        #console { background: #000; color: #10b981; padding: 15px; border-radius: 8px; height: 250px; overflow-y: scroll; font-family: monospace; font-size: 0.85em; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050d1a; color: #e2e8f0; margin: 0; padding: 20px; }
+        .header { display: flex; justify: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
+        .logo { font-size: 24px; font-weight: bold; color: #00d4ff; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        input, select, button { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; width: 100%; box-sizing: border-box; }
+        button { background: #00d4ff; color: #050d1a; font-weight: bold; border: none; cursor: pointer; }
+        button.stop { background: #ef4444; color: #fff; }
+        button.critical { background: #ff3b3b; color: #fff; }
+        #console { background: #000; color: #00e676; padding: 15px; border-radius: 8px; height: 250px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+        .log-critical { color: #ff5252; font-weight: bold; }
+        .log-high { color: #ff9800; font-weight: bold; }
+        .log-low { color: #00e676; }
     </style>
 </head>
 <body>
-    <h2>🏥 External Medical Equipment Log Generator</h2>
-    <div class="card">
-        <h3>Target Central AURA Server Settings</h3>
-        <label>Central Server IP / Host:</label>
-        <input type="text" id="serverIp" value="127.0.0.1">
-        <label>Port:</label>
-        <input type="text" id="serverPort" value="8000">
-        <label>Hospital ID:</label>
-        <input type="text" id="hospitalId" value="demo-hospital">
+    <div class="header">
+        <div class="logo">🏥 LOGx Telemetry Generator</div>
+        <div>Target: <span id="targetIpDisplay" style="color:#00d4ff">http://127.0.0.1:8000</span></div>
     </div>
 
     <div class="card">
-        <h3>Stream Controls</h3>
-        <label>Failure Scenario:</label>
-        <select id="scenario">
-            <option value="OK">Normal Operation</option>
-            <option value="BAT_CRITICAL">Critical Battery Failure</option>
-            <option value="TEMP_CRITICAL">Thermal Overheating</option>
-            <option value="SENSOR_ERR">Sensor Calibration Error</option>
-        </select>
-        <button id="startBtn" onclick="startStreaming()">▶ Start Log Streaming</button>
-        <button id="stopBtn" class="stop" onclick="stopStreaming()" style="display:none;">⏹ Stop Streaming</button>
+        <h3>1. Server & Device Configuration</h3>
+        <div class="grid">
+            <div>
+                <label>AURA Host IP:</label>
+                <input type="text" id="serverIp" value="127.0.0.1">
+            </div>
+            <div>
+                <label>Port:</label>
+                <input type="text" id="serverPort" value="8000">
+            </div>
+            <div>
+                <label>Device ID:</label>
+                <input type="text" id="deviceId" value="DEV000025">
+            </div>
+            <div>
+                <label>Device Type:</label>
+                <select id="deviceType">
+                    <option value="Ventilator">Ventilator</option>
+                    <option value="Patient monitor">Patient monitor</option>
+                    <option value="CT scanner">CT scanner</option>
+                    <option value="MRI scanner">MRI scanner</option>
+                    <option value="Infusion pump">Infusion pump</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <div class="card">
-        <h3>Outgoing Live Log Console</h3>
-        <div id="console">Log console idle. Click Start Log Streaming to send telemetry...</div>
+        <h3>2. Failure Scenario Injector</h3>
+        <div class="grid">
+            <div>
+                <label>Scenario:</label>
+                <select id="scenario">
+                    <option value="OK">🟢 Normal Operation (LOW Risk)</option>
+                    <option value="BAT_CRITICAL">🚨 Battery Degradation (CRITICAL Risk)</option>
+                    <option value="TEMP_CRITICAL">🌡️ Thermal Overheating (CRITICAL Risk)</option>
+                    <option value="SENSOR_ERR">📡 Sensor Error (HIGH Risk)</option>
+                    <option value="POWER_FLUC">⚡ Power Fluctuation (HIGH Risk)</option>
+                </select>
+            </div>
+            <div>
+                <label>Interval:</label>
+                <select id="interval">
+                    <option value="2000">2 Seconds</option>
+                    <option value="3000" selected>3 Seconds</option>
+                    <option value="5000">5 Seconds</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-top:15px; display:flex; gap:10px;">
+            <button id="startBtn" onclick="startStreaming()">▶ Start Telemetry Stream</button>
+            <button id="stopBtn" class="stop" onclick="stopStreaming()" style="display:none;">⏹ Stop Stream</button>
+            <button class="critical" onclick="sendSinglePayload('BAT_CRITICAL')">⚡ Inject Single CRITICAL Failure</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>3. Real-Time Telemetry & ML Response Console</h3>
+        <div id="console">Console initialized. Click 'Start Telemetry Stream' to begin.</div>
     </div>
 
     <script>
         let timer = null;
-        function log(msg) {
+
+        function log(msg, riskClass = 'log-low') {
             const c = document.getElementById('console');
-            c.innerHTML += '<div>[' + new Date().toLocaleTimeString() + '] ' + msg + '</div>';
+            const time = new Date().toLocaleTimeString();
+            c.innerHTML += `<div class="${riskClass}">[${time}] ${msg}</div>`;
             c.scrollTop = c.scrollHeight;
+        }
+
+        function getPayload(errorCode = null) {
+            const sc = errorCode || document.getElementById('scenario').value;
+            const devId = document.getElementById('deviceId').value;
+            const devType = document.getElementById('deviceType').value;
+            
+            let bat = 92.5, temp = 36.8, load = 62.0, volt = 23.8;
+            if (sc === 'BAT_CRITICAL') { bat = 14.2; temp = 37.4; load = 88.0; volt = 18.5; }
+            else if (sc === 'TEMP_CRITICAL') { bat = 75.0; temp = 54.2; load = 96.0; volt = 21.0; }
+            else if (sc === 'SENSOR_ERR') { bat = 82.0; temp = 39.1; load = 78.0; volt = 22.5; }
+            else if (sc === 'POWER_FLUC') { bat = 68.0; temp = 41.0; load = 91.0; volt = 16.2; }
+
+            return {
+                hospital_id: "demo-hospital",
+                device_id: devId,
+                device_type: devType,
+                department: "Intensive Care Unit (ICU)",
+                timestamp: new Date().toISOString(),
+                battery_health: bat,
+                temperature: temp,
+                load_percent: load,
+                error_code: sc,
+                operating_hours: 3400.0,
+                voltage: volt
+            };
+        }
+
+        async function sendSinglePayload(forceCode = null) {
+            const ip = document.getElementById('serverIp').value;
+            const port = document.getElementById('serverPort').value;
+            const url = `http://${ip}:${port}/api/v1/ingest/telemetry`;
+            const payload = getPayload(forceCode);
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': 'aura_live_ingest_key_2026',
+                        'Hospital-ID': 'demo-hospital'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const risk = data.risk_level || 'UNKNOWN';
+                const cls = risk === 'CRITICAL' ? 'log-critical' : (risk === 'HIGH' ? 'log-high' : 'log-low');
+                log(`POST ${payload.device_id} | Code: ${payload.error_code} | Bat: ${payload.battery_health}% | Temp: ${payload.temperature}°C ➔ ML Prediction: ${risk} (Health: ${data.overall_health}%, Anomaly: ${data.anomaly_score})`, cls);
+            } catch (err) {
+                log(`❌ Transmission Error: ${err.message}`, 'log-critical');
+            }
         }
 
         function startStreaming() {
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('stopBtn').style.display = 'block';
-            log('Starting telemetry log stream to central server...');
-            
-            timer = setInterval(async () => {
-                const ip = document.getElementById('serverIp').value;
-                const port = document.getElementById('serverPort').value;
-                const hosp = document.getElementById('hospitalId').value;
-                const scenario = document.getElementById('scenario').value;
-
-                const payload = {
-                    hospital_id: hosp,
-                    device_id: 'DEV' + Math.floor(100000 + Math.random() * 900000),
-                    device_type: 'Ventilator',
-                    department: 'Intensive Care Unit (ICU)',
-                    timestamp: new Date().toISOString(),
-                    battery_health: scenario === 'BAT_CRITICAL' ? 18.5 : 92.0,
-                    temperature: scenario === 'TEMP_CRITICAL' ? 49.5 : 36.6,
-                    load_percent: 68.0,
-                    error_code: scenario
-                };
-
-                try {
-                    const res = await fetch('http://' + ip + ':' + port + '/api/v1/ingest/telemetry', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-API-Key': 'aura_live_ingest_key_2026',
-                            'Hospital-ID': hosp
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await res.json();
-                    log('✅ Sent Log for ' + payload.device_id + ' | Server Response: ' + JSON.stringify(data));
-                } catch(err) {
-                    log('❌ Stream Error: ' + err.message);
-                }
-            }, 3000);
+            const interval = parseInt(document.getElementById('interval').value);
+            log('Starting live telemetry stream to AURA ML engine...');
+            sendSinglePayload();
+            timer = setInterval(() => sendSinglePayload(), interval);
         }
 
         function stopStreaming() {
             clearInterval(timer);
             document.getElementById('startBtn').style.display = 'block';
             document.getElementById('stopBtn').style.display = 'none';
-            log('Log stream stopped.');
+            log('Telemetry stream stopped.');
         }
     </script>
 </body>
@@ -326,5 +288,5 @@ to run a full graphical Log Generator Website:
 ```
 
 ====================================================================================================
-END OF SPECIFICATION FILE
+END OF SPECIFICATION
 ====================================================================================================
