@@ -980,30 +980,30 @@ export default function App() {
   // Render Login overlay if unauthenticated
   if (!currentUser) {
     return (
-      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)' }}>
-        <div className="glass-card" style={{ width: '460px', padding: '40px', display: 'flex', flexDirection: 'column', gap: '25px', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'radial-gradient(circle at center, #f8fafc 0%, #cbd5e1 100%)' }}>
+        <div className="glass-card" style={{ width: '460px', padding: '40px', display: 'flex', flexDirection: 'column', gap: '25px', border: '1px solid var(--border-color)', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
               <Activity size={36} color="#3b82f6" />
-              <span style={{ fontSize: '1.6em', fontWeight: 800, letterSpacing: '0.05em' }}>AURA INTELLIGENCE</span>
+              <span style={{ fontSize: '1.6em', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>AURA INTELLIGENCE</span>
             </div>
-            <span style={{ fontSize: '0.85em', color: '#94a3b8' }}>AI-Powered Reliability & Multi-Tenant Predictive Platform</span>
+            <span style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>AI-Powered Reliability & Multi-Tenant Predictive Platform</span>
           </div>
 
           {loginError && (
-            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', padding: '12px', borderRadius: '6px', fontSize: '0.85em', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', padding: '12px', borderRadius: '6px', fontSize: '0.85em', textAlign: 'center' }}>
               {loginError}
             </div>
           )}
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.8em', color: '#94a3b8', fontWeight: 500 }}>Username</label>
-              <input type="text" value={loginUsername} onChange={e => setLoginUsername(e.target.value)} required />
+              <label style={{ fontSize: '0.8em', color: 'var(--text-secondary)', fontWeight: 500 }}>Username</label>
+              <input type="text" value={loginUsername} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} onChange={e => setLoginUsername(e.target.value)} required />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.8em', color: '#94a3b8', fontWeight: 500 }}>Password</label>
-              <input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
+              <label style={{ fontSize: '0.8em', color: 'var(--text-secondary)', fontWeight: 500 }}>Password</label>
+              <input type="password" value={loginPassword} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} onChange={e => setLoginPassword(e.target.value)} required />
             </div>
             
             <button className="primary" type="submit" style={{ padding: '12px', fontWeight: 'bold', fontSize: '1em', marginTop: '10px' }}>
@@ -1012,19 +1012,19 @@ export default function App() {
           </form>
 
           {/* Quick Profiles */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
-            <span style={{ fontSize: '0.75em', color: '#64748b', display: 'block', marginBottom: '10px', fontWeight: 600 }}>QUICK ACCESS DEMO PROFILES</span>
+          <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+            <span style={{ fontSize: '0.75em', color: 'var(--text-muted)', display: 'block', marginBottom: '10px', fontWeight: 600 }}>QUICK ACCESS DEMO PROFILES</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8em' }}>
-              <button style={{ padding: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#3b82f6', cursor: 'pointer', textAlign: 'left' }} onClick={() => { setLoginUsername('admin'); setLoginPassword('password123'); }}>
+              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#2563eb', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('admin'); setLoginPassword('password123'); }}>
                 👑 Admin
               </button>
-              <button style={{ padding: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#60a5fa', cursor: 'pointer', textAlign: 'left' }} onClick={() => { setLoginUsername('biomed'); setLoginPassword('password123'); }}>
+              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#4f46e5', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('biomed'); setLoginPassword('password123'); }}>
                 🔧 BioMed Eng
               </button>
-              <button style={{ padding: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#fb923c', cursor: 'pointer', textAlign: 'left' }} onClick={() => { setLoginUsername('operator'); setLoginPassword('password123'); }}>
+              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#ea580c', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('operator'); setLoginPassword('password123'); }}>
                 🏥 Operator
               </button>
-              <button style={{ padding: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', color: '#34d399', cursor: 'pointer', textAlign: 'left' }} onClick={() => { setLoginUsername('auditor'); setLoginPassword('password123'); }}>
+              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#059669', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('auditor'); setLoginPassword('password123'); }}>
                 📄 Auditor
               </button>
             </div>
@@ -1037,34 +1037,34 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Persistent Alert Notification Inbox Panel */}
-      <div style={{ position: 'fixed', top: 0, right: alertPanelOpen ? 0 : '-460px', width: '440px', height: '100vh', zIndex: 9999, background: 'rgba(10,15,30,0.97)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(239,68,68,0.3)', boxShadow: '-8px 0 40px rgba(0,0,0,0.6)', transition: 'right 0.35s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: 0, right: alertPanelOpen ? 0 : '-460px', width: '440px', height: '100vh', zIndex: 9999, background: 'var(--drawer-bg)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(239,68,68,0.3)', boxShadow: '-8px 0 40px rgba(0,0,0,0.06)', transition: 'right 0.35s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
         {/* Panel Header */}
-        <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239,68,68,0.08)' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239,68,68,0.03)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <ShieldAlert size={20} color="#ef4444" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '1em', color: 'white' }}>Failure Alert Inbox</div>
-              <div style={{ fontSize: '0.75em', color: '#94a3b8' }}>{notificationInbox.filter(n => !n.resolved).length} unresolved alerts</div>
+              <div style={{ fontWeight: 700, fontSize: '1em', color: 'var(--text-primary)' }}>Failure Alert Inbox</div>
+              <div style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>{notificationInbox.filter(n => !n.resolved).length} unresolved alerts</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {notificationInbox.filter(n => !n.resolved).length > 0 && (
               <button
-                style={{ fontSize: '0.75em', color: '#64748b', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}
+                style={{ fontSize: '0.75em', color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}
                 onClick={() => {
                   setNotificationInbox(prev => prev.map(n => ({ ...n, resolved: true })));
                   setAlerts(prev => prev.map(a => ({ ...a, status: 'acknowledged' })));
                 }}
               >Resolve All</button>
             )}
-            <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2em', padding: '4px 8px' }} onClick={() => setAlertPanelOpen(false)}>✕</button>
+            <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2em', padding: '4px 8px' }} onClick={() => setAlertPanelOpen(false)}>✕</button>
           </div>
         </div>
 
         {/* Alert Cards List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {notificationInbox.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: '40px 20px' }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 20px' }}>
               <CheckCircle size={32} color="#10b981" style={{ marginBottom: '10px' }} />
               <p>No active failure alerts. All systems nominal.</p>
             </div>
@@ -1073,9 +1073,9 @@ export default function App() {
             <div
               key={n.id}
               style={{
-                background: n.resolved ? 'rgba(255,255,255,0.02)' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.08)' : 'rgba(249,115,22,0.08)'),
-                border: `1px solid ${n.resolved ? 'rgba(255,255,255,0.06)' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.35)' : 'rgba(249,115,22,0.35)')}`,
-                borderLeft: `4px solid ${n.resolved ? '#374151' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316')}`,
+                background: n.resolved ? '#f8fafc' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.04)' : 'rgba(249,115,22,0.04)'),
+                border: `1px solid ${n.resolved ? 'var(--border-light)' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : 'rgba(249,115,22,0.2)')}`,
+                borderLeft: `4px solid ${n.resolved ? 'var(--border-color)' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316')}`,
                 borderRadius: '10px',
                 padding: '14px',
                 opacity: n.resolved ? 0.45 : 1,
@@ -1083,34 +1083,34 @@ export default function App() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '0.82em', color: n.resolved ? '#64748b' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316'), display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '0.82em', color: n.resolved ? 'var(--text-muted)' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316'), display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <ShieldAlert size={13} />
                   {n.resolved ? '✓ RESOLVED' : `${n.risk_level} FAILURE ALERT`}
                 </span>
-                <span style={{ fontSize: '0.72em', color: '#64748b' }}>{n.timestamp}</span>
+                <span style={{ fontSize: '0.72em', color: 'var(--text-muted)' }}>{n.timestamp}</span>
               </div>
-              <div style={{ fontWeight: 700, fontSize: '0.98em', color: 'white', marginBottom: '4px' }}>{n.device_id}</div>
-              <div style={{ fontSize: '0.78em', color: '#94a3b8', marginBottom: '4px' }}>{n.device_type} • {n.department}</div>
+              <div style={{ fontWeight: 700, fontSize: '0.98em', color: 'var(--text-primary)', marginBottom: '4px' }}>{n.device_id}</div>
+              <div style={{ fontSize: '0.78em', color: 'var(--text-secondary)', marginBottom: '4px' }}>{n.device_type} • {n.department}</div>
               {/* Real ML prediction data */}
               <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.72em', background: 'rgba(239,68,68,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.72em', background: 'rgba(239,68,68,0.15)', color: '#dc2626', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
                   Health: {n.overall_health?.toFixed(1) ?? '—'}%
                 </span>
-                <span style={{ fontSize: '0.72em', background: 'rgba(249,115,22,0.15)', color: '#fb923c', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.72em', background: 'rgba(249,115,22,0.15)', color: '#ea580c', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
                   Fail Prob: {n.failure_probability ? Math.round(n.failure_probability * 100) : '—'}%
                 </span>
                 {n.anomaly_score > 0 && (
-                  <span style={{ fontSize: '0.72em', background: 'rgba(168,85,247,0.15)', color: '#c084fc', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.72em', background: 'rgba(168,85,247,0.15)', color: '#7c3aed', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
                     Anomaly: {n.anomaly_score?.toFixed(1)}
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: '0.78em', color: '#f87171', marginBottom: '2px', fontWeight: 600 }}>⚠ Root Cause: {n.root_cause || '—'}</div>
-              <div style={{ fontSize: '0.78em', color: '#cbd5e1', marginBottom: '10px' }}>⚕️ {n.recommended_action}</div>
+              <div style={{ fontSize: '0.78em', color: '#ef4444', marginBottom: '2px', fontWeight: 600 }}>⚠ Root Cause: {n.root_cause || '—'}</div>
+              <div style={{ fontSize: '0.78em', color: 'var(--text-secondary)', marginBottom: '10px' }}>⚕️ {n.recommended_action}</div>
               {!n.resolved && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
-                    style={{ flex: 1, background: 'rgba(59,130,246,0.15)', border: '1px solid #3b82f6', color: '#60a5fa', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                    style={{ flex: 1, background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1', color: '#818cf8', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                     onClick={() => {
                       // Use real ML inference data if available from WebSocket broadcast
                       // Otherwise fall back to notification fields
@@ -1176,18 +1176,18 @@ export default function App() {
 
       {/* Sidebar Navigation */}
       <div className="sidebar">
-        <div style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '20px' }}>
+        <div style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid var(--border-light)', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Activity size={28} color="#3b82f6" />
-            <span style={{ fontSize: '1.2em', fontWeight: 700, letterSpacing: '0.05em' }}>AURA INTELLIGENCE</span>
+            <span style={{ fontSize: '1.2em', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>AURA INTELLIGENCE</span>
           </div>
-          <span style={{ fontSize: '0.7em', color: '#94a3b8', display: 'block', marginTop: '4px' }}>Medical Reliability Platform</span>
+          <span style={{ fontSize: '0.7em', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Medical Reliability Platform</span>
         </div>
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', padding: '0 10px', overflowY: 'auto' }}>
           {hasPageAccess('dashboard') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'dashboard' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'dashboard' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'dashboard' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'dashboard' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('dashboard')}
             >
               <Activity size={18} />
@@ -1196,7 +1196,7 @@ export default function App() {
           )}
           {hasPageAccess('explorer') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'explorer' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'explorer' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'explorer' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'explorer' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('explorer')}
             >
               <Search size={18} />
@@ -1205,7 +1205,7 @@ export default function App() {
           )}
           {hasPageAccess('twin') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'twin' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'twin' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'twin' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'twin' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('twin')}
             >
               <HardDrive size={18} />
@@ -1214,7 +1214,7 @@ export default function App() {
           )}
           {hasPageAccess('heatmap') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'heatmap' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'heatmap' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'heatmap' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'heatmap' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('heatmap')}
             >
               <MapPin size={18} />
@@ -1223,7 +1223,7 @@ export default function App() {
           )}
           {hasPageAccess('prediction') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'prediction' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'prediction' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'prediction' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'prediction' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('prediction')}
             >
               <ShieldAlert size={18} />
@@ -1232,7 +1232,7 @@ export default function App() {
           )}
           {hasPageAccess('rul') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'rul' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'rul' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'rul' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'rul' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('rul')}
             >
               <Clock size={18} />
@@ -1241,7 +1241,7 @@ export default function App() {
           )}
           {hasPageAccess('graph') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'graph' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'graph' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'graph' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'graph' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('graph')}
             >
               <Brain size={18} />
@@ -1250,7 +1250,7 @@ export default function App() {
           )}
           {hasPageAccess('advisor') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'advisor' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'advisor' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'advisor' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'advisor' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('advisor')}
             >
               <HelpCircle size={18} />
@@ -1259,7 +1259,7 @@ export default function App() {
           )}
           {hasPageAccess('explainability') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'explainability' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'explainability' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'explainability' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'explainability' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('explainability')}
             >
               <Layers size={18} />
@@ -1268,11 +1268,11 @@ export default function App() {
           )}
           
           {/* NEW EXTENSIONS SECTION */}
-          <div style={{ margin: '15px 0 5px 12px', fontSize: '0.7em', color: '#64748b', fontWeight: 600, letterSpacing: '0.05em' }}>NEW EXTENSIONS</div>
+          <div style={{ margin: '15px 0 5px 12px', fontSize: '0.7em', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.05em' }}>NEW EXTENSIONS</div>
           
           {hasPageAccess('hospital_connect') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'hospital_connect' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'hospital_connect' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'hospital_connect' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'hospital_connect' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('hospital_connect')}
             >
               <Database size={18} />
@@ -1281,7 +1281,7 @@ export default function App() {
           )}
           {hasPageAccess('dataset_upload') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'dataset_upload' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'dataset_upload' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'dataset_upload' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'dataset_upload' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('dataset_upload')}
             >
               <Upload size={18} />
@@ -1290,7 +1290,7 @@ export default function App() {
           )}
           {hasPageAccess('knowledge_base') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'knowledge_base' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'knowledge_base' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'knowledge_base' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'knowledge_base' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('knowledge_base')}
             >
               <FileText size={18} />
@@ -1299,7 +1299,7 @@ export default function App() {
           )}
           {hasPageAccess('audit_logs') && (
             <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'audit_logs' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'audit_logs' ? '#3b82f6' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'audit_logs' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'audit_logs' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
               onClick={() => setActiveTab('audit_logs')}
             >
               <Sliders size={18} />
@@ -1308,7 +1308,7 @@ export default function App() {
           )}
           
           <button 
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'alerts' ? 'rgba(59,130,246,0.15)' : 'transparent', color: activeTab === 'alerts' ? '#ef4444' : '#94a3b8', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'alerts' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'alerts' ? '#ef4444' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
             onClick={() => setActiveTab('alerts')}
           >
             <AlertOctagon size={18} />
@@ -1317,14 +1317,14 @@ export default function App() {
         </div>
 
         {/* User Card */}
-        <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '20px', borderTop: '1px solid var(--border-light)', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <div style={{ width: '38px', height: '38px', background: '#3b82f6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+            <div style={{ width: '38px', height: '38px', background: '#3b82f6', color: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
               {currentUser.username[0].toUpperCase()}
             </div>
             <div>
-              <div style={{ fontSize: '0.9em', fontWeight: 500 }}>{currentUser.username}</div>
-              <div style={{ fontSize: '0.7em', color: '#64748b' }}>{currentUser.role.replace('_', ' ')}</div>
+              <div style={{ fontSize: '0.9em', fontWeight: 500, color: 'var(--text-primary)' }}>{currentUser.username}</div>
+              <div style={{ fontSize: '0.7em', color: 'var(--text-muted)' }}>{currentUser.role.replace('_', ' ')}</div>
             </div>
           </div>
           <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85em', fontWeight: 'bold' }} onClick={handleLogout}>
@@ -1426,7 +1426,7 @@ export default function App() {
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ margin: 0 }}>Highest Operational Risk Devices</h3>
-                  <button style={{ fontSize: '0.85em', color: '#3b82f6', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }} onClick={() => setActiveTab('alerts')}>View All Alerts</button>
+                  <button style={{ fontSize: '0.85em', color: '#6366f1', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }} onClick={() => setActiveTab('alerts')}>View All Alerts</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {alerts.filter(a => a.status === 'active').slice(0, 5).map(dev => (
@@ -1528,7 +1528,7 @@ export default function App() {
                         title="Click to open Digital Twin"
                       >
                         <td style={{ padding: '7px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>{log.timestamp}</td>
-                        <td style={{ padding: '7px 6px', fontWeight: 700, color: log.risk_level === 'CRITICAL' ? '#f87171' : '#60a5fa' }}>{log.device_id}</td>
+                        <td style={{ padding: '7px 6px', fontWeight: 700, color: log.risk_level === 'CRITICAL' ? '#f87171' : '#818cf8' }}>{log.device_id}</td>
                         <td style={{ padding: '7px 6px' }}>
                           <div style={{ fontWeight: 500 }}>{log.device_type}</div>
                           <div style={{ fontSize: '0.8em', color: '#64748b' }}>{log.department}</div>
@@ -1717,7 +1717,7 @@ export default function App() {
                     <div>
                       <span style={{ fontWeight: 700, color: '#f97316', fontSize: '0.9em' }}>⚡ Live Telemetry Twin — </span>
                       <span style={{ color: '#cbd5e1', fontSize: '0.85em' }}>This device was streamed from LOGx and is not in the device registry. Showing real-time telemetry data. </span>
-                      <button style={{ color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', fontWeight: 600, padding: 0 }} onClick={() => fetchDeviceDetails(deviceData.device_id)}>↻ Refresh from backend</button>
+                      <button style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', fontWeight: 600, padding: 0 }} onClick={() => fetchDeviceDetails(deviceData.device_id)}>↻ Refresh from backend</button>
                     </div>
                   </div>
                 )}
@@ -1760,7 +1760,7 @@ export default function App() {
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75em', color: '#64748b' }}>RUL TIME</div>
-                        <div style={{ fontWeight: 'bold', fontSize: '0.9em', marginTop: '3px', color: '#3b82f6' }}>{deviceData.predicted_failure_time_days} days</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.9em', marginTop: '3px', color: '#6366f1' }}>{deviceData.predicted_failure_time_days} days</div>
                       </div>
                     </div>
                   </div>
@@ -1843,7 +1843,7 @@ export default function App() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {deviceData.component_details[selectedComponent].evidence.map((ev, i) => (
                           <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '0.85em', background: 'rgba(15,23,42,0.4)', padding: '8px 12px', borderRadius: '6px' }}>
-                            <Info size={16} color="#3b82f6" style={{ flexShrink: 0 }} />
+                            <Info size={16} color="#6366f1" style={{ flexShrink: 0 }} />
                             <span>{ev}</span>
                           </div>
                         ))}
@@ -1957,13 +1957,13 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                   <div className="glass-card" style={{ textAlign: 'center', padding: '25px' }}>
                     <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>7-DAY HORIZON</div>
-                    <div style={{ fontSize: '3em', fontWeight: 700, margin: '10px 0', color: deviceData.failure_probability > 0.8 ? '#ef4444' : '#3b82f6' }}>
+                    <div style={{ fontSize: '3em', fontWeight: 700, margin: '10px 0', color: deviceData.failure_probability > 0.8 ? '#ef4444' : '#6366f1' }}>
                       {Math.round(deviceData.failure_probability * 15)}%
                     </div>
                   </div>
                   <div className="glass-card" style={{ textAlign: 'center', padding: '25px' }}>
                     <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>14-DAY HORIZON</div>
-                    <div style={{ fontSize: '3em', fontWeight: 700, margin: '10px 0', color: deviceData.failure_probability > 0.6 ? '#f97316' : '#3b82f6' }}>
+                    <div style={{ fontSize: '3em', fontWeight: 700, margin: '10px 0', color: deviceData.failure_probability > 0.6 ? '#f97316' : '#6366f1' }}>
                       {Math.round(deviceData.failure_probability * 45)}%
                     </div>
                   </div>
@@ -1992,7 +1992,7 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div className="glass-card" style={{ textAlign: 'center', padding: '30px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div style={{ fontSize: '0.9em', color: '#94a3b8', fontWeight: 500 }}>PREDICTED DAYS REMAINING</div>
-                    <div style={{ fontSize: '4.5em', fontWeight: 800, color: '#3b82f6', lineHeight: 1 }}>
+                    <div style={{ fontSize: '4.5em', fontWeight: 800, color: '#6366f1', lineHeight: 1 }}>
                       {deviceData.predicted_failure_time_days}
                     </div>
                   </div>
@@ -2019,16 +2019,16 @@ export default function App() {
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
-                  <line x1="400" y1="250" x2="400" y2="100" stroke="#3b82f6" strokeWidth="2" strokeDasharray="5,5" />
+                  <line x1="400" y1="250" x2="400" y2="100" stroke="#6366f1" strokeWidth="2" strokeDasharray="5,5" />
                   <line x1="400" y1="250" x2="200" y2="200" stroke="#10b981" strokeWidth="2" />
                   <line x1="400" y1="250" x2="250" y2="350" stroke="#10b981" strokeWidth="2" />
                   <line x1="400" y1="250" x2="600" y2="200" stroke="#10b981" strokeWidth="2" />
                   <line x1="400" y1="250" x2="550" y2="350" stroke="#ef4444" strokeWidth="2" />
                   <line x1="550" y1="350" x2="650" y2="420" stroke="#f97316" strokeWidth="2" />
 
-                  <circle cx="400" cy="100" r="22" fill="#1e293b" stroke="#3b82f6" strokeWidth="2" />
+                  <circle cx="400" cy="100" r="22" fill="#1e293b" stroke="#6366f1" strokeWidth="2" />
                   <text x="400" y="105" fill="white" fontSize="10" fontWeight="bold" textAnchor="middle">ICU</text>
-                  <circle cx="400" cy="250" r="30" fill="#0f172a" stroke="#3b82f6" strokeWidth="3" />
+                  <circle cx="400" cy="250" r="30" fill="#0f172a" stroke="#6366f1" strokeWidth="3" />
                   <text x="400" y="254" fill="white" fontSize="11" fontWeight="bold" textAnchor="middle">{deviceData.device_id}</text>
                   <circle cx="200" cy="200" r="20" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
                   <text x="200" y="204" fill="white" fontSize="10" textAnchor="middle">Control</text>
@@ -2051,15 +2051,15 @@ export default function App() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <h1 style={{ margin: 0, fontSize: '2em' }}>RAG Maintenance Advisor</h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Query verified manufacturer specifications and get xAI Grok evidence summary</p>
+              <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)' }}>Query verified manufacturer specifications and get xAI Grok evidence summary</p>
             </div>
 
             {deviceData && (
               <div className="glass-card chat-window" style={{ height: '560px' }}>
-                <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '12px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h3 style={{ margin: 0 }}>Grok AI Biomed Support: {deviceData.device_id}</h3>
-                    <span style={{ fontSize: '0.8em', color: '#94a3b8' }}>Target component: {deviceData.root_cause?.primary}</span>
+                    <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>Target component: {deviceData.root_cause?.primary}</span>
                   </div>
                   <span className="badge badge-low">RAG GROK-4.5 ENGINE</span>
                 </div>
@@ -2111,8 +2111,8 @@ export default function App() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: '2em' }}>Model Performance & Benchmarking</h1>
-                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Comparative analysis of ML architectures & pipeline training status</p>
+                <h1 style={{ margin: 0, fontSize: '2em', color: 'var(--text-primary)' }}>Model Performance & Benchmarking</h1>
+                <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)' }}>Comparative analysis of ML architectures & pipeline training status</p>
               </div>
               <span className="badge badge-low" style={{ fontSize: '0.85em' }}>
                 Active Model: {modelMetadata?.selected_model || 'Logistic Regression'}
@@ -2123,14 +2123,14 @@ export default function App() {
             <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.9em', color: '#cbd5e1', fontWeight: 600 }}>ML Pipeline Retraining Status</span>
-                  <span style={{ fontSize: '0.8em', color: trainingStatus.is_training ? '#60a5fa' : '#34d399', fontWeight: 'bold' }}>
+                  <span style={{ fontSize: '0.9em', color: 'var(--text-secondary)', fontWeight: 600 }}>ML Pipeline Retraining Status</span>
+                  <span style={{ fontSize: '0.8em', color: trainingStatus.is_training ? '#4f46e5' : '#059669', fontWeight: 'bold' }}>
                     {trainingStatus.is_training ? '⏳ ' + trainingStatus.status : '🟢 IDLE (Ready)'}
                   </span>
                 </div>
                 
                 {/* Progress bar */}
-                <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                <div style={{ height: '8px', background: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
                   <div 
                     style={{ 
                       width: `${trainingStatus.is_training ? trainingStatus.progress : 100}%`, 
@@ -2141,7 +2141,7 @@ export default function App() {
                   />
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#64748b' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: 'var(--text-muted)' }}>
                   <span>Last training run: {trainingStatus.last_completed || modelMetadata?.training_date || 'N/A'}</span>
                   {trainingStatus.is_training && <span>{trainingStatus.progress}% Complete</span>}
                 </div>
@@ -2151,7 +2151,7 @@ export default function App() {
                 className="primary" 
                 onClick={triggerModelRetrain} 
                 disabled={trainingStatus.is_training} 
-                style={{ padding: '12px 24px', background: trainingStatus.is_training ? 'rgba(255,255,255,0.02)' : '#3b82f6', color: trainingStatus.is_training ? '#64748b' : 'white', cursor: trainingStatus.is_training ? 'not-allowed' : 'pointer' }}
+                style={{ padding: '12px 24px', background: trainingStatus.is_training ? '#f1f5f9' : 'var(--btn-primary-bg)', color: trainingStatus.is_training ? 'var(--text-muted)' : 'var(--btn-primary-color)', cursor: trainingStatus.is_training ? 'not-allowed' : 'pointer' }}
               >
                 🔄 {trainingStatus.is_training ? 'Training...' : 'Retrain ML Pipeline'}
               </button>
@@ -2162,29 +2162,29 @@ export default function App() {
               
               {/* Prompt Predictor Form */}
               <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
-                  <h3 style={{ margin: 0 }}>Interactive Telemetry Log Predictor</h3>
-                  <span style={{ fontSize: '0.8em', color: '#64748b' }}>Submit a telemetry prompt/log message for live ML model prediction</span>
+                <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '10px' }}>
+                  <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Interactive Telemetry Log Predictor</h3>
+                  <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>Submit a telemetry prompt/log message for live ML model prediction</span>
                 </div>
 
                 {/* Example prompt buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '0.75em', color: '#94a3b8', fontWeight: 500 }}>Example Prompts (Click to load):</span>
+                  <span style={{ fontSize: '0.75em', color: 'var(--text-secondary)', fontWeight: 500 }}>Example Prompts (Click to load):</span>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button 
-                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', color: '#059669', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
                       onClick={() => setPredictPrompt('Patient monitor DEV000001 in ICU running nominal, battery is at 98.4% and temp is 36.5 C. Error code: OK')}
                     >
                       🟢 Normal Telemetry
                     </button>
                     <button 
-                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
                       onClick={() => setPredictPrompt('Defibrillator DEV000025 reports critical battery failure, health dropped to 12.8% and error code: BAT_CRITICAL')}
                     >
                       🚨 Critical Battery Anomaly
                     </button>
                     <button 
-                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', color: '#fb923c', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(249,115,22,0.05)', border: '1px solid rgba(249,115,22,0.2)', color: '#ea580c', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}
                       onClick={() => setPredictPrompt('Ventilator DEV000001 reports overheating warning, temperature measured at 58.2 C with TEMP_CRITICAL error code')}
                     >
                       🔥 Overheating Failure
@@ -2197,7 +2197,7 @@ export default function App() {
                     value={predictPrompt}
                     onChange={e => setPredictPrompt(e.target.value)}
                     placeholder="Enter telemetry log message or JSON string. E.g. 'Ventilator DEV000001 in ICU reports battery health of 14.5% with BAT_CRITICAL error code...'"
-                    style={{ width: '100%', height: '100px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#f8fafc', padding: '10px', fontFamily: 'monospace', fontSize: '0.85em', resize: 'vertical' }}
+                    style={{ width: '100%', height: '100px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '6px', color: 'var(--text-primary)', padding: '10px', fontFamily: 'monospace', fontSize: '0.85em', resize: 'vertical' }}
                   />
                   <button className="primary" type="submit" disabled={isPredictLoading || !predictPrompt.trim()} style={{ width: '100%' }}>
                     {isPredictLoading ? <RefreshCw className="animate-spin" size={16} /> : '⚡ Execute Live Prediction'}
@@ -2205,18 +2205,18 @@ export default function App() {
                 </form>
 
                 {predictError && (
-                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', padding: '10px', borderRadius: '6px', fontSize: '0.8em' }}>
+                  <div style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', padding: '10px', borderRadius: '6px', fontSize: '0.8em' }}>
                     {predictError}
                   </div>
                 )}
 
                 {/* Prediction Result Panel */}
                 {predictionResult && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '5px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '15px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '5px', borderTop: '1px solid var(--border-light)', paddingTop: '15px' }}>
                     
                     {/* Flashing Alert if High or Critical risk */}
                     {(predictionResult.risk_level === 'CRITICAL' || predictionResult.risk_level === 'HIGH') && (
-                      <div className="flash-alert-banner" style={{ borderLeft: '4px solid #ef4444', borderRadius: '6px', padding: '12px', color: '#f87171', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div className="flash-alert-banner" style={{ borderLeft: '4px solid #ef4444', borderRadius: '6px', padding: '12px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <ShieldAlert size={20} className="animate-bounce" />
                         <div>
                           <strong style={{ fontSize: '0.9em', display: 'block' }}>🚨 {predictionResult.risk_level} operational risk detected on {predictionResult.device_id}!</strong>
@@ -2226,27 +2226,27 @@ export default function App() {
                     )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85em' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '10px', borderRadius: '6px' }}>
                         <div style={{ color: '#64748b', fontSize: '0.75em' }}>HEALTH SCORE</div>
                         <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: getHealthColor(predictionResult.overall_health) }}>{predictionResult.overall_health}%</div>
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '10px', borderRadius: '6px' }}>
                         <div style={{ color: '#64748b', fontSize: '0.75em' }}>RISK CATEGORY</div>
                         <div style={{ marginTop: '5px' }}>{getRiskBadge(predictionResult.risk_level)}</div>
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '10px', borderRadius: '6px' }}>
                         <div style={{ color: '#64748b', fontSize: '0.75em' }}>FAILURE WINDOW (RUL)</div>
-                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: '#3b82f6' }}>{predictionResult.predicted_failure_time_days || '—'} days</div>
+                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: '#2563eb' }}>{predictionResult.predicted_failure_time_days || '—'} days</div>
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '10px', borderRadius: '6px' }}>
                         <div style={{ color: '#64748b', fontSize: '0.75em' }}>ANOMALY SCORE</div>
-                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: '#c084fc' }}>{predictionResult.anomaly?.score?.toFixed(1) || '0.0'}</div>
+                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: '#7c3aed' }}>{predictionResult.anomaly?.score?.toFixed(1) || '0.0'}</div>
                       </div>
                     </div>
 
-                    <div style={{ fontSize: '0.85em', background: 'rgba(15,23,42,0.4)', padding: '10px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div>🔍 Primary root cause: <strong style={{ color: '#f87171' }}>{predictionResult.root_cause?.primary || 'None'}</strong></div>
-                      <div style={{ color: '#cbd5e1', fontSize: '0.95em', marginTop: '4px' }}>⚕️ Action: {predictionResult.maintenance?.recommended_action}</div>
+                    <div style={{ fontSize: '0.85em', background: '#f8fafc', border: '1px solid var(--border-light)', padding: '10px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ color: 'var(--text-primary)' }}>🔍 Primary root cause: <strong style={{ color: '#ef4444' }}>{predictionResult.root_cause?.primary || 'None'}</strong></div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.95em', marginTop: '4px' }}>⚕️ Action: {predictionResult.maintenance?.recommended_action}</div>
                     </div>
                   </div>
                 )}
@@ -2260,60 +2260,60 @@ export default function App() {
                 };
                 return (
                   <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
-                      <h3 style={{ margin: 0 }}>Confusion Matrix Visualizer</h3>
-                      <span style={{ fontSize: '0.8em', color: '#64748b' }}>Interactive validation evaluation for {selectedBenchmarkModel}</span>
+                    <div style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '10px' }}>
+                      <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Confusion Matrix Visualizer</h3>
+                      <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>Interactive validation evaluation for {selectedBenchmarkModel}</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', gridTemplateRows: '30px 100px 100px', gap: '8px', position: 'relative', marginTop: '10px', textAlign: 'center' }}>
                       {/* Grid Headers */}
-                      <div style={{ gridColumn: 2, gridRow: 1, fontWeight: 'bold', fontSize: '0.8em', color: '#94a3b8' }}>PREDICTED NORMAL</div>
+                      <div style={{ gridColumn: 2, gridRow: 1, fontWeight: 'bold', fontSize: '0.8em', color: 'var(--text-muted)' }}>PREDICTED NORMAL</div>
                       <div style={{ gridColumn: 3, gridRow: 1, fontWeight: 'bold', fontSize: '0.8em', color: '#ef4444' }}>PREDICTED FAILURE</div>
-                      <div style={{ gridColumn: 1, gridRow: 2, writingMode: 'vertical-lr', transform: 'rotate(180deg)', fontWeight: 'bold', fontSize: '0.8em', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ACTUAL NORMAL</div>
+                      <div style={{ gridColumn: 1, gridRow: 2, writingMode: 'vertical-lr', transform: 'rotate(180deg)', fontWeight: 'bold', fontSize: '0.8em', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ACTUAL NORMAL</div>
                       <div style={{ gridColumn: 1, gridRow: 3, writingMode: 'vertical-lr', transform: 'rotate(180deg)', fontWeight: 'bold', fontSize: '0.8em', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ACTUAL FAILURE</div>
 
                       {/* TN Card */}
-                      <div style={{ gridColumn: 2, gridRow: 2, background: 'rgba(16,185,129,0.05)', border: '1px dashed rgba(16,185,129,0.3)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>TRUE NEGATIVE (TN)</div>
-                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#10b981', margin: '4px 0' }}>{modelInfo.TN}</div>
-                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>Correctly Normal</div>
+                      <div style={{ gridColumn: 2, gridRow: 2, background: 'rgba(16,185,129,0.02)', border: '1px dashed rgba(16,185,129,0.4)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)', fontWeight: 600 }}>TRUE NEGATIVE (TN)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#059669', margin: '4px 0' }}>{modelInfo.TN}</div>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)' }}>Correctly Normal</div>
                       </div>
 
                       {/* FP Card */}
-                      <div style={{ gridColumn: 3, gridRow: 2, background: 'rgba(239,68,68,0.05)', border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>FALSE POSITIVE (FP)</div>
-                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#f87171', margin: '4px 0' }}>{modelInfo.FP}</div>
-                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>False Alarm</div>
+                      <div style={{ gridColumn: 3, gridRow: 2, background: 'rgba(239,68,68,0.02)', border: '1px dashed rgba(239,68,68,0.3)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)', fontWeight: 600 }}>FALSE POSITIVE (FP)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#dc2626', margin: '4px 0' }}>{modelInfo.FP}</div>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)' }}>False Alarm</div>
                       </div>
 
                       {/* FN Card */}
-                      <div style={{ gridColumn: 2, gridRow: 3, background: 'rgba(239,68,68,0.05)', border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>FALSE NEGATIVE (FN)</div>
-                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#f87171', margin: '4px 0' }}>{modelInfo.FN}</div>
-                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>Missed Failure</div>
+                      <div style={{ gridColumn: 2, gridRow: 3, background: 'rgba(239,68,68,0.02)', border: '1px dashed rgba(239,68,68,0.3)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)', fontWeight: 600 }}>FALSE NEGATIVE (FN)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#dc2626', margin: '4px 0' }}>{modelInfo.FN}</div>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)' }}>Missed Failure</div>
                       </div>
 
                       {/* TP Card */}
-                      <div style={{ gridColumn: 3, gridRow: 3, background: 'rgba(16,185,129,0.05)', border: '1px dashed rgba(16,185,129,0.3)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>TRUE POSITIVE (TP)</div>
-                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#10b981', margin: '4px 0' }}>{modelInfo.TP}</div>
-                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>Correctly Flagged</div>
+                      <div style={{ gridColumn: 3, gridRow: 3, background: 'rgba(16,185,129,0.02)', border: '1px dashed rgba(16,185,129,0.4)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)', fontWeight: 600 }}>TRUE POSITIVE (TP)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#059669', margin: '4px 0' }}>{modelInfo.TP}</div>
+                        <div style={{ fontSize: '0.7em', color: 'var(--text-muted)' }}>Correctly Flagged</div>
                       </div>
                     </div>
 
                     {/* Derived evaluation stats */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '0.85em', textAlign: 'center', marginTop: '8px' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px' }}>
-                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>PRECISION</div>
-                        <div style={{ fontWeight: 'bold', color: '#3b82f6', marginTop: '2px' }}>{modelInfo.Precision || modelInfo.precision || '—'}</div>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '8px', borderRadius: '4px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75em' }}>PRECISION</div>
+                        <div style={{ fontWeight: 'bold', color: '#2563eb', marginTop: '2px' }}>{modelInfo.Precision || modelInfo.precision || '—'}</div>
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px' }}>
-                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>RECALL (SENSITIVITY)</div>
-                        <div style={{ fontWeight: 'bold', color: '#10b981', marginTop: '2px' }}>{modelInfo.Recall || modelInfo.recall || '—'}</div>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '8px', borderRadius: '4px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75em' }}>RECALL (SENSITIVITY)</div>
+                        <div style={{ fontWeight: 'bold', color: '#059669', marginTop: '2px' }}>{modelInfo.Recall || modelInfo.recall || '—'}</div>
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px' }}>
-                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>F1-SCORE</div>
-                        <div style={{ fontWeight: 'bold', color: '#fb923c', marginTop: '2px' }}>{modelInfo['F1-Score'] || modelInfo.f1 || '—'}</div>
+                      <div style={{ background: '#f8fafc', border: '1px solid var(--border-light)', padding: '8px', borderRadius: '4px' }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75em' }}>F1-SCORE</div>
+                        <div style={{ fontWeight: 'bold', color: '#ea580c', marginTop: '2px' }}>{modelInfo['F1-Score'] || modelInfo.f1 || '—'}</div>
                       </div>
                     </div>
                   </div>
@@ -2323,10 +2323,10 @@ export default function App() {
 
             {/* Validation Performance Matrix Table */}
             <div className="glass-card">
-              <h3 style={{ margin: '0 0 15px 0' }}>Validation Performance Matrix</h3>
+              <h3 style={{ margin: '0 0 15px 0', color: 'var(--text-primary)' }}>Validation Performance Matrix</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 0 }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
                     <th style={{ padding: '12px 18px', textAlign: 'left' }}>Model Architecture</th>
                     <th>ROC-AUC</th>
                     <th>PR-AUC</th>
@@ -2348,17 +2348,18 @@ export default function App() {
                     <tr 
                       key={item.Model} 
                       style={{ 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                        background: selectedBenchmarkModel === item.Model ? 'rgba(59,130,246,0.1)' : 'transparent',
+                        borderBottom: '1px solid var(--border-light)', 
+                        background: selectedBenchmarkModel === item.Model ? 'var(--active-tab-bg)' : 'transparent',
                         fontWeight: selectedBenchmarkModel === item.Model ? 600 : 400,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        color: 'var(--text-primary)'
                       }}
                       onClick={() => setSelectedBenchmarkModel(item.Model)}
                     >
                       <td style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>{item.Model}</span>
                         {item.Model === modelMetadata?.selected_model && (
-                          <span style={{ fontSize: '0.72em', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', padding: '2px 6px', borderRadius: '4px' }}>Active</span>
+                          <span style={{ fontSize: '0.72em', background: 'var(--active-tab-bg)', color: 'var(--active-tab-color)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>Active</span>
                         )}
                       </td>
                       <td style={{ textAlign: 'center' }}>{item['ROC-AUC']?.toFixed(4)}</td>
@@ -2377,12 +2378,12 @@ export default function App() {
             {/* Model Features list */}
             {modelMetadata?.features_list && (
               <div className="glass-card">
-                <h3 style={{ margin: '0 0 12px 0' }}>Training Features Store Schema ({modelMetadata.features_list.length} total features)</h3>
+                <h3 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)' }}>Training Features Store Schema ({modelMetadata.features_list.length} total features)</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
                   {modelMetadata.features_list.map((feat) => (
                     <span 
                       key={feat} 
-                      style={{ fontSize: '0.76em', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#cbd5e1', padding: '4px 10px', borderRadius: '15px' }}
+                      style={{ fontSize: '0.76em', background: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '4px 10px', borderRadius: '15px', fontWeight: 500 }}
                     >
                       {feat}
                     </span>
@@ -2470,13 +2471,13 @@ export default function App() {
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button 
                       className="primary" 
-                      style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid #3b82f6', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                      style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid #6366f1', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }} 
                       onClick={() => { setSelectedDeviceId(dev.device_id); setActiveTab('twin'); }}
                     >
                       <Eye size={14} /> Inspect Twin
                     </button>
                     {dev.risk_level === 'CRITICAL' && dev.status === 'active' && (
-                      <button className="primary" style={{ background: '#3b82f6' }} onClick={() => triggerAutoAdvisor(dev.device_id)}>
+                      <button className="primary" style={{ background: '#6366f1' }} onClick={() => triggerAutoAdvisor(dev.device_id)}>
                         Ask AI Advisor
                       </button>
                     )}
@@ -2644,8 +2645,8 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* File Upload Box */}
-                <div className="glass-card" style={{ border: '2px dashed rgba(59,130,246,0.35)', borderRadius: '12px', padding: '30px', textAlign: 'center', background: 'rgba(59,130,246,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                  <Upload size={36} color="#3b82f6" />
+                <div className="glass-card" style={{ border: '2px dashed rgba(99,102,241,0.35)', borderRadius: '12px', padding: '30px', textAlign: 'center', background: 'rgba(99,102,241,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                  <Upload size={36} color="#6366f1" />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '1.05em' }}>Drop Hospital Telemetry Dataset</div>
                     <div style={{ fontSize: '0.8em', color: '#64748b', marginTop: '4px' }}>Supports .csv, .xlsx, .json, .parquet (Max 50MB)</div>
@@ -2657,8 +2658,8 @@ export default function App() {
                   {uploadProgress && (
                     <div style={{
                       fontSize: '0.85em', padding: '8px 14px', borderRadius: '6px', width: '100%',
-                      background: uploadProgress.includes('successfully') ? 'rgba(16,185,129,0.15)' : uploadProgress.includes('Error') ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)',
-                      color: uploadProgress.includes('successfully') ? '#10b981' : uploadProgress.includes('Error') ? '#ef4444' : '#3b82f6'
+                      background: uploadProgress.includes('successfully') ? 'rgba(16,185,129,0.15)' : uploadProgress.includes('Error') ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.15)',
+                      color: uploadProgress.includes('successfully') ? '#10b981' : uploadProgress.includes('Error') ? '#ef4444' : '#6366f1'
                     }}>{uploadProgress}</div>
                   )}
                 </div>
@@ -2680,7 +2681,7 @@ export default function App() {
                           style={{
                             padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.03)',
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer',
-                            background: selectedDataset?.dataset_id === ds.dataset_id ? 'rgba(59,130,246,0.12)' : 'transparent'
+                            background: selectedDataset?.dataset_id === ds.dataset_id ? 'rgba(99,102,241,0.12)' : 'transparent'
                           }}
                           onClick={() => { setSelectedDataset(ds); setColumnMappings(ds.column_mapping || {}); setValidationReport(null); }}
                         >
@@ -2705,7 +2706,7 @@ export default function App() {
                 {selectedDataset ? (
                   <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h3 style={{ margin: 0 }}>⚙️ Schema Mapper: <span style={{ color: '#3b82f6' }}>{selectedDataset.filename}</span></h3>
+                      <h3 style={{ margin: 0 }}>⚙️ Schema Mapper: <span style={{ color: '#6366f1' }}>{selectedDataset.filename}</span></h3>
                       <span style={{ fontSize: '0.75em', color: '#94a3b8', fontFamily: 'monospace' }}>{selectedDataset.dataset_id}</span>
                     </div>
 
@@ -2828,8 +2829,8 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ border: '2px dashed rgba(59,130,246,0.35)', borderRadius: '10px', padding: '24px', textAlign: 'center', background: 'rgba(59,130,246,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                <Upload size={28} color="#3b82f6" />
+              <div style={{ border: '2px dashed rgba(99,102,241,0.35)', borderRadius: '10px', padding: '24px', textAlign: 'center', background: 'rgba(99,102,241,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <Upload size={28} color="#6366f1" />
                 <div style={{ fontSize: '0.9em', color: '#94a3b8' }}>Accepts <strong>.txt</strong>, <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.csv</strong></div>
                 <input type="file" id="manualFile" style={{ display: 'none' }} accept=".txt,.pdf,.docx,.doc,.csv" onChange={handleUploadManual} />
                 <button className="primary" onClick={() => { document.getElementById('manualFile').value = ''; document.getElementById('manualFile').click(); }}>
@@ -2842,10 +2843,10 @@ export default function App() {
                     borderRadius: '6px',
                     background: kbUploadProgress.startsWith('✅') ? 'rgba(16,185,129,0.15)'
                               : kbUploadProgress.startsWith('❌') ? 'rgba(239,68,68,0.15)'
-                              : 'rgba(59,130,246,0.15)',
+                              : 'rgba(99,102,241,0.15)',
                     color: kbUploadProgress.startsWith('✅') ? '#10b981'
                          : kbUploadProgress.startsWith('❌') ? '#ef4444'
-                         : '#3b82f6',
+                         : '#6366f1',
                     width: '100%'
                   }}>{kbUploadProgress}</div>
                 )}
@@ -2855,7 +2856,7 @@ export default function App() {
             {/* Manuals Database Table */}
             <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0 }}>📚 Manuals Database - Hospital: <span style={{ color: '#3b82f6' }}>{currentUser?.hospital_id || 'demo-hospital'}</span></h3>
+                <h3 style={{ margin: 0 }}>📚 Manuals Database - Hospital: <span style={{ color: '#6366f1' }}>{currentUser?.hospital_id || 'demo-hospital'}</span></h3>
                 <span style={{ fontSize: '0.8em', color: '#64748b' }}>{knowledgeDocs.length} manual{knowledgeDocs.length !== 1 ? 's' : ''} indexed</span>
               </div>
               {knowledgeDocs.length === 0 ? (
@@ -2891,7 +2892,7 @@ export default function App() {
                         <td style={{ padding: '12px 20px' }}>v{doc.model_version || doc.document_version || '1.0'}</td>
                         <td style={{ padding: '12px 20px', textAlign: 'center' }}>
                           <button
-                            style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.85em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.85em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             onClick={() => fetchDocChunks(doc)}
                             title="Click to view all segmented text chunks in SQL database"
                           >
@@ -2924,10 +2925,10 @@ export default function App() {
 
             {/* SQL Document Chunks Inspection Viewer */}
             {selectedDocForChunks && (
-              <div className="glass-card" style={{ border: '1px solid rgba(59,130,246,0.3)', display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(15,23,42,0.95)' }}>
+              <div className="glass-card" style={{ border: '1px solid rgba(99,102,241,0.3)', display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(15,23,42,0.95)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
                   <div>
-                    <h3 style={{ margin: 0, color: '#3b82f6' }}>🔍 SQL Vector Chunks: {selectedDocForChunks.filename}</h3>
+                    <h3 style={{ margin: 0, color: '#6366f1' }}>🔍 SQL Vector Chunks: {selectedDocForChunks.filename}</h3>
                     <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '2px' }}>Document ID: {selectedDocForChunks.document_id} • Device: {selectedDocForChunks.device_type} • Hospital: {selectedDocForChunks.hospital_id}</div>
                   </div>
                   <button
@@ -2939,14 +2940,14 @@ export default function App() {
                 </div>
 
                 {chunksLoading ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#3b82f6' }}>Loading SQL chunks...</div>
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#6366f1' }}>Loading SQL chunks...</div>
                 ) : docChunks.length === 0 ? (
                   <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No chunks found for this document.</div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', maxHeight: '320px', overflowY: 'auto' }}>
                     {docChunks.map((c, idx) => (
                       <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85em' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#3b82f6', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#6366f1', fontWeight: 600 }}>
                           <span>📌 Chunk #{idx + 1} — {c.section}</span>
                           <span>Page {c.page}</span>
                         </div>

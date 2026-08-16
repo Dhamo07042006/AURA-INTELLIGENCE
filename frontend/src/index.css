@@ -5,9 +5,48 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
-  color: #f8fafc;
-  background-color: #090d16;
+  color-scheme: light;
+  
+  --bg-primary: #f8fafc; /* slate-50 */
+  --bg-secondary: #ffffff; /* white */
+  --bg-sidebar: #ffffff;
+  --border-color: #cbd5e1; /* slate-300 */
+  --border-light: #e2e8f0; /* slate-200 */
+  
+  --text-primary: #0f172a; /* slate-900 */
+  --text-secondary: #334155; /* slate-700 */
+  --text-muted: #64748b; /* slate-500 */
+  
+  --card-bg: #ffffff;
+  --card-hover-border: #94a3b8;
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --card-hover-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-color: #0f172a;
+  --input-focus-border: #3b82f6;
+
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-hover: #2563eb;
+  --btn-primary-color: #ffffff;
+  
+  --active-tab-bg: rgba(59, 130, 246, 0.08);
+  --active-tab-color: #3b82f6;
+  --inactive-tab-color: #475569;
+  
+  --table-header-bg: #e2e8f0;
+  --table-row-hover: #f1f5f9;
+  
+  --drawer-bg: rgba(255, 255, 255, 0.98);
+  --bubble-user-bg: #3b82f6;
+  --bubble-user-color: #ffffff;
+  --bubble-advisor-bg: #f1f5f9;
+  --bubble-advisor-color: #0f172a;
+  --bubble-advisor-border: #e2e8f0;
+
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -20,6 +59,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Scrollbar styling */
@@ -28,28 +69,27 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: var(--bg-primary);
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--border-light);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--border-color);
 }
 
 /* Utility layout styles */
 .app-container {
   display: flex;
   min-height: 100vh;
-  background: radial-gradient(circle at 10% 20%, rgb(9, 13, 22) 0%, rgb(17, 24, 39) 90%);
+  background: var(--bg-primary);
 }
 
 .sidebar {
   width: 260px;
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   padding: 20px 0;
@@ -63,24 +103,24 @@ body {
   flex: 1;
   padding: 30px;
   overflow-y: auto;
-  min-width: 0; /* Prevents flex children from bursting boundary */
+  min-width: 0;
 }
 
 /* Premium Card Design */
 .glass-card {
-  background: rgba(22, 30, 49, 0.65);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
   border-radius: 12px;
   padding: 20px;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--card-shadow);
+  color: var(--text-primary);
 }
 
 .glass-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  border-color: var(--card-hover-border);
+  box-shadow: var(--card-hover-shadow);
 }
 
 /* Risk indicators */
@@ -95,7 +135,7 @@ body {
 }
 .risk-critical {
   border-left: 4px solid #ef4444 !important;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.08) !important;
 }
 
 .badge {
@@ -110,25 +150,25 @@ body {
 
 .badge-low {
   background: rgba(16, 185, 129, 0.1);
-  color: #34d399;
+  color: #059669; /* darker for light theme contrast */
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .badge-medium {
   background: rgba(245, 158, 11, 0.1);
-  color: #fbbf24;
+  color: #d97706; /* darker for light theme contrast */
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .badge-high {
   background: rgba(249, 115, 22, 0.1);
-  color: #fb923c;
+  color: #ea580c; /* darker for light theme contrast */
   border: 1px solid rgba(249, 115, 22, 0.2);
 }
 
 .badge-critical {
   background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
+  color: #dc2626; /* darker for light theme contrast */
   border: 1px solid rgba(239, 68, 68, 0.2);
   animation: pulse-border 2s infinite;
 }
@@ -163,15 +203,15 @@ body {
 
 .health-gauge-value .label {
   font-size: 0.7em;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
 /* Input Fields and Selects */
 select, input, button {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 0.9em;
@@ -180,18 +220,19 @@ select, input, button {
 }
 
 select:focus, input:focus {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--input-focus-border);
 }
 
 button.primary {
-  background: #3b82f6;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
   border: none;
   font-weight: 500;
   cursor: pointer;
 }
 
 button.primary:hover {
-  background: #2563eb;
+  background: var(--btn-primary-hover);
 }
 
 button:disabled {
@@ -225,16 +266,16 @@ button:disabled {
 }
 
 .message-bubble.user {
-  background: #3b82f6;
-  color: white;
+  background: var(--bubble-user-bg);
+  color: var(--bubble-user-color);
   align-self: flex-end;
   border-bottom-right-radius: 2px;
 }
 
 .message-bubble.advisor {
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  color: #f1f5f9;
+  background: var(--bubble-advisor-bg);
+  border: 1px solid var(--bubble-advisor-border);
+  color: var(--bubble-advisor-color);
   align-self: flex-start;
   border-bottom-left-radius: 2px;
 }
