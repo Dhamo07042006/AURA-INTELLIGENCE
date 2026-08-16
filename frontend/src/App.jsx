@@ -124,6 +124,17 @@ export default function App() {
   // ==========================================
   const [auditLogs, setAuditLogs] = useState([]);
 
+  // ==========================================
+  // MODULE 6: Model Benchmarks & Retraining state
+  // ==========================================
+  const [modelMetadata, setModelMetadata] = useState(null);
+  const [trainingStatus, setTrainingStatus] = useState({ is_training: false, status: 'idle', progress: 0, error: null, last_completed: null });
+  const [predictPrompt, setPredictPrompt] = useState('');
+  const [predictionResult, setPredictionResult] = useState(null);
+  const [isPredictLoading, setIsPredictLoading] = useState(false);
+  const [predictError, setPredictError] = useState(null);
+  const [selectedBenchmarkModel, setSelectedBenchmarkModel] = useState('Logistic Regression');
+
   // Authenticated Fetch wrapper
   const authFetch = async (url, options = {}) => {
     const token = localStorage.getItem('aura_token');
@@ -153,6 +164,8 @@ export default function App() {
       fetchKnowledgeDocs();
       fetchAuditLogs();
       fetchStreamStatus();
+      fetchModelMetadata();
+      fetchTrainingStatus();
       
       // Setup stream status polling every 4 seconds
       const statusInterval = setInterval(fetchStreamStatus, 4000);
@@ -815,6 +828,122 @@ export default function App() {
       setKbChatLoading(false);
     }
   };
+
+  // ==========================================
+  // MODULE 6: Model Benchmarking & Retraining actions
+  // ==========================================
+  const fetchModelMetadata = async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/model/metadata`);
+      if (res.ok) {
+        const data = await res.json();
+        setModelMetadata(data);
+        if (data.selected_model) {
+          setSelectedBenchmarkModel(data.selected_model);
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching model metadata:", e);
+    }
+  };
+
+  const fetchTrainingStatus = async () => {
+    try {
+      const res = await authFetch(`${API_BASE}/model/train-status`);
+      if (res.ok) {
+        const data = await res.json();
+        setTrainingStatus(data);
+        return data;
+      }
+    } catch (e) {
+      console.error("Error fetching training status:", e);
+    }
+    return null;
+  };
+
+  const triggerModelRetrain = async () => {
+    try {
+      setTrainingStatus(prev => ({ ...prev, is_training: true, status: 'Triggering ML Pipeline...' }));
+      const res = await authFetch(`${API_BASE}/model/retrain`, { method: 'POST' });
+      if (res.ok) {
+        fetchTrainingStatus();
+      }
+    } catch (e) {
+      console.error("Error triggering retraining:", e);
+    }
+  };
+
+  const handlePredictPrompt = async (e) => {
+    if (e) e.preventDefault();
+    if (!predictPrompt.trim()) return;
+    
+    setIsPredictLoading(true);
+    setPredictError(null);
+    setPredictionResult(null);
+    
+    try {
+      const res = await authFetch(`${API_BASE}/model/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: predictPrompt,
+          device_id: selectedDeviceId
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setPredictionResult(data.report);
+        
+        // Prepend prompt log to telemetry table for immediate dashboard visibility
+        const parsed = data.parsed_payload;
+        const newLog = {
+          log_id: Date.now() + Math.random().toString(),
+          device_id: parsed.device_id || selectedDeviceId || 'DEV000001',
+          device_type: data.report.device_type || 'Medical Device',
+          department: data.report.department || 'General Ward',
+          timestamp: new Date().toLocaleTimeString(),
+          validation_status: 'VALID',
+          anomaly_status: data.report.anomaly?.status || 'Normal',
+          anomaly_score: data.report.anomaly?.score || 0,
+          risk_level: data.report.risk_level || 'LOW',
+          overall_health: data.report.overall_health || 100,
+          failure_probability: data.report.failure_probability || 0,
+          root_cause: data.report.root_cause?.primary || 'None',
+          recommended_action: data.report.maintenance?.recommended_action || 'Nominal monitoring',
+          rul_days: data.report.predicted_failure_time_days || null,
+          payload: predictPrompt,
+          _fullData: data.report
+        };
+        setLiveLogs(prev => [newLog, ...prev].slice(0, 200));
+        
+        // Reload alerts list
+        fetchAlerts();
+      } else {
+        setPredictError(data.detail || 'Failed to analyze prompt');
+      }
+    } catch (err) {
+      setPredictError('Network error connecting to ML inference engine.');
+    } finally {
+      setIsPredictLoading(false);
+    }
+  };
+
+  // Poll training status if training is active
+  useEffect(() => {
+    if (!currentUser) return;
+    let interval = null;
+    if (trainingStatus.is_training) {
+      interval = setInterval(async () => {
+        const status = await fetchTrainingStatus();
+        if (status && !status.is_training) {
+          fetchModelMetadata();
+        }
+      }, 2000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [trainingStatus.is_training, currentUser]);
 
   // Helper colors
   const getRiskBadge = (risk) => {
@@ -1970,43 +2099,297 @@ export default function App() {
         {/* MODEL BENCHMARKS */}
         {activeTab === 'explainability' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '2em' }}>Model Performance & Benchmarking</h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Comparative analysis of ML architectures</p>
+            <style>{`
+              @keyframes flashAlert {
+                0%, 100% { background-color: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.35); }
+                50% { background-color: rgba(239, 68, 68, 0.25); border-color: rgba(239, 68, 68, 0.85); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+              }
+              .flash-alert-banner {
+                animation: flashAlert 1.5s infinite;
+              }
+            `}</style>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h1 style={{ margin: 0, fontSize: '2em' }}>Model Performance & Benchmarking</h1>
+                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Comparative analysis of ML architectures & pipeline training status</p>
+              </div>
+              <span className="badge badge-low" style={{ fontSize: '0.85em' }}>
+                Active Model: {modelMetadata?.selected_model || 'Logistic Regression'}
+              </span>
             </div>
+
+            {/* MLOps Training & Pipeline Status */}
+            <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.9em', color: '#cbd5e1', fontWeight: 600 }}>ML Pipeline Retraining Status</span>
+                  <span style={{ fontSize: '0.8em', color: trainingStatus.is_training ? '#60a5fa' : '#34d399', fontWeight: 'bold' }}>
+                    {trainingStatus.is_training ? '⏳ ' + trainingStatus.status : '🟢 IDLE (Ready)'}
+                  </span>
+                </div>
+                
+                {/* Progress bar */}
+                <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+                  <div 
+                    style={{ 
+                      width: `${trainingStatus.is_training ? trainingStatus.progress : 100}%`, 
+                      background: trainingStatus.is_training ? 'linear-gradient(90deg, #3b82f6, #60a5fa)' : '#10b981', 
+                      height: '100%', 
+                      transition: 'width 0.5s ease-in-out' 
+                    }} 
+                  />
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#64748b' }}>
+                  <span>Last training run: {trainingStatus.last_completed || modelMetadata?.training_date || 'N/A'}</span>
+                  {trainingStatus.is_training && <span>{trainingStatus.progress}% Complete</span>}
+                </div>
+              </div>
+              
+              <button 
+                className="primary" 
+                onClick={triggerModelRetrain} 
+                disabled={trainingStatus.is_training} 
+                style={{ padding: '12px 24px', background: trainingStatus.is_training ? 'rgba(255,255,255,0.02)' : '#3b82f6', color: trainingStatus.is_training ? '#64748b' : 'white', cursor: trainingStatus.is_training ? 'not-allowed' : 'pointer' }}
+              >
+                🔄 {trainingStatus.is_training ? 'Training...' : 'Retrain ML Pipeline'}
+              </button>
+            </div>
+
+            {/* Split layout: Prompt Predictor & Visual Confusion Matrix */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr', gap: '25px' }}>
+              
+              {/* Prompt Predictor Form */}
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
+                  <h3 style={{ margin: 0 }}>Interactive Telemetry Log Predictor</h3>
+                  <span style={{ fontSize: '0.8em', color: '#64748b' }}>Submit a telemetry prompt/log message for live ML model prediction</span>
+                </div>
+
+                {/* Example prompt buttons */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75em', color: '#94a3b8', fontWeight: 500 }}>Example Prompts (Click to load):</span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button 
+                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399', borderRadius: '4px', cursor: 'pointer' }}
+                      onClick={() => setPredictPrompt('Patient monitor DEV000001 in ICU running nominal, battery is at 98.4% and temp is 36.5 C. Error code: OK')}
+                    >
+                      🟢 Normal Telemetry
+                    </button>
+                    <button 
+                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '4px', cursor: 'pointer' }}
+                      onClick={() => setPredictPrompt('Defibrillator DEV000025 reports critical battery failure, health dropped to 12.8% and error code: BAT_CRITICAL')}
+                    >
+                      🚨 Critical Battery Anomaly
+                    </button>
+                    <button 
+                      style={{ fontSize: '0.75em', padding: '5px 10px', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', color: '#fb923c', borderRadius: '4px', cursor: 'pointer' }}
+                      onClick={() => setPredictPrompt('Ventilator DEV000001 reports overheating warning, temperature measured at 58.2 C with TEMP_CRITICAL error code')}
+                    >
+                      🔥 Overheating Failure
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handlePredictPrompt} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <textarea 
+                    value={predictPrompt}
+                    onChange={e => setPredictPrompt(e.target.value)}
+                    placeholder="Enter telemetry log message or JSON string. E.g. 'Ventilator DEV000001 in ICU reports battery health of 14.5% with BAT_CRITICAL error code...'"
+                    style={{ width: '100%', height: '100px', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#f8fafc', padding: '10px', fontFamily: 'monospace', fontSize: '0.85em', resize: 'vertical' }}
+                  />
+                  <button className="primary" type="submit" disabled={isPredictLoading || !predictPrompt.trim()} style={{ width: '100%' }}>
+                    {isPredictLoading ? <RefreshCw className="animate-spin" size={16} /> : '⚡ Execute Live Prediction'}
+                  </button>
+                </form>
+
+                {predictError && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', padding: '10px', borderRadius: '6px', fontSize: '0.8em' }}>
+                    {predictError}
+                  </div>
+                )}
+
+                {/* Prediction Result Panel */}
+                {predictionResult && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '5px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '15px' }}>
+                    
+                    {/* Flashing Alert if High or Critical risk */}
+                    {(predictionResult.risk_level === 'CRITICAL' || predictionResult.risk_level === 'HIGH') && (
+                      <div className="flash-alert-banner" style={{ borderLeft: '4px solid #ef4444', borderRadius: '6px', padding: '12px', color: '#f87171', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <ShieldAlert size={20} className="animate-bounce" />
+                        <div>
+                          <strong style={{ fontSize: '0.9em', display: 'block' }}>🚨 {predictionResult.risk_level} operational risk detected on {predictionResult.device_id}!</strong>
+                          <span style={{ fontSize: '0.78em' }}>Model predicts {Math.round(predictionResult.failure_probability*100)}% failure likelihood. Alert dispatched.</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.85em' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>HEALTH SCORE</div>
+                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: getHealthColor(predictionResult.overall_health) }}>{predictionResult.overall_health}%</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>RISK CATEGORY</div>
+                        <div style={{ marginTop: '5px' }}>{getRiskBadge(predictionResult.risk_level)}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>FAILURE WINDOW (RUL)</div>
+                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: '#3b82f6' }}>{predictionResult.predicted_failure_time_days || '—'} days</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '6px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>ANOMALY SCORE</div>
+                        <div style={{ fontSize: '1.4em', fontWeight: 700, marginTop: '2px', color: '#c084fc' }}>{predictionResult.anomaly?.score?.toFixed(1) || '0.0'}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.85em', background: 'rgba(15,23,42,0.4)', padding: '10px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div>🔍 Primary root cause: <strong style={{ color: '#f87171' }}>{predictionResult.root_cause?.primary || 'None'}</strong></div>
+                      <div style={{ color: '#cbd5e1', fontSize: '0.95em', marginTop: '4px' }}>⚕️ Action: {predictionResult.maintenance?.recommended_action}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confusion Matrix Section */}
+              {(() => {
+                const summaryList = modelMetadata?.metrics_summary || [];
+                const modelInfo = summaryList.find(m => m.Model === selectedBenchmarkModel) || summaryList[0] || {
+                  TP: 1310, FP: 564, FN: 55, TN: 1554, Precision: 0.699, Recall: 0.9597, 'F1-Score': 0.8089
+                };
+                return (
+                  <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
+                      <h3 style={{ margin: 0 }}>Confusion Matrix Visualizer</h3>
+                      <span style={{ fontSize: '0.8em', color: '#64748b' }}>Interactive validation evaluation for {selectedBenchmarkModel}</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr', gridTemplateRows: '30px 100px 100px', gap: '8px', position: 'relative', marginTop: '10px', textAlign: 'center' }}>
+                      {/* Grid Headers */}
+                      <div style={{ gridColumn: 2, gridRow: 1, fontWeight: 'bold', fontSize: '0.8em', color: '#94a3b8' }}>PREDICTED NORMAL</div>
+                      <div style={{ gridColumn: 3, gridRow: 1, fontWeight: 'bold', fontSize: '0.8em', color: '#ef4444' }}>PREDICTED FAILURE</div>
+                      <div style={{ gridColumn: 1, gridRow: 2, writingMode: 'vertical-lr', transform: 'rotate(180deg)', fontWeight: 'bold', fontSize: '0.8em', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ACTUAL NORMAL</div>
+                      <div style={{ gridColumn: 1, gridRow: 3, writingMode: 'vertical-lr', transform: 'rotate(180deg)', fontWeight: 'bold', fontSize: '0.8em', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>ACTUAL FAILURE</div>
+
+                      {/* TN Card */}
+                      <div style={{ gridColumn: 2, gridRow: 2, background: 'rgba(16,185,129,0.05)', border: '1px dashed rgba(16,185,129,0.3)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>TRUE NEGATIVE (TN)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#10b981', margin: '4px 0' }}>{modelInfo.TN}</div>
+                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>Correctly Normal</div>
+                      </div>
+
+                      {/* FP Card */}
+                      <div style={{ gridColumn: 3, gridRow: 2, background: 'rgba(239,68,68,0.05)', border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>FALSE POSITIVE (FP)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#f87171', margin: '4px 0' }}>{modelInfo.FP}</div>
+                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>False Alarm</div>
+                      </div>
+
+                      {/* FN Card */}
+                      <div style={{ gridColumn: 2, gridRow: 3, background: 'rgba(239,68,68,0.05)', border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>FALSE NEGATIVE (FN)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#f87171', margin: '4px 0' }}>{modelInfo.FN}</div>
+                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>Missed Failure</div>
+                      </div>
+
+                      {/* TP Card */}
+                      <div style={{ gridColumn: 3, gridRow: 3, background: 'rgba(16,185,129,0.05)', border: '1px dashed rgba(16,185,129,0.3)', borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.7em', color: '#64748b', fontWeight: 600 }}>TRUE POSITIVE (TP)</div>
+                        <div style={{ fontSize: '1.8em', fontWeight: 800, color: '#10b981', margin: '4px 0' }}>{modelInfo.TP}</div>
+                        <div style={{ fontSize: '0.7em', color: '#94a3b8' }}>Correctly Flagged</div>
+                      </div>
+                    </div>
+
+                    {/* Derived evaluation stats */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '0.85em', textAlign: 'center', marginTop: '8px' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>PRECISION</div>
+                        <div style={{ fontWeight: 'bold', color: '#3b82f6', marginTop: '2px' }}>{modelInfo.Precision || modelInfo.precision || '—'}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>RECALL (SENSITIVITY)</div>
+                        <div style={{ fontWeight: 'bold', color: '#10b981', marginTop: '2px' }}>{modelInfo.Recall || modelInfo.recall || '—'}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '4px' }}>
+                        <div style={{ color: '#64748b', fontSize: '0.75em' }}>F1-SCORE</div>
+                        <div style={{ fontWeight: 'bold', color: '#fb923c', marginTop: '2px' }}>{modelInfo['F1-Score'] || modelInfo.f1 || '—'}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Validation Performance Matrix Table */}
             <div className="glass-card">
               <h3 style={{ margin: '0 0 15px 0' }}>Validation Performance Matrix</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 0 }}>
                 <thead>
-                  <tr>
-                    <th style={{ padding: '12px 18px' }}>Model Architecture</th>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '12px 18px', textAlign: 'left' }}>Model Architecture</th>
                     <th>ROC-AUC</th>
                     <th>PR-AUC</th>
                     <th>Accuracy</th>
                     <th>Precision</th>
                     <th>Recall</th>
+                    <th>F1-Score</th>
+                    <th>Train Time</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(59,130,246,0.05)', fontWeight: 600 }}>
-                    <td style={{ padding: '12px 18px' }}>Logistic Regression (Best)</td>
-                    <td>0.8795</td>
-                    <td>0.7505</td>
-                    <td>85.20%</td>
-                    <td>0.6841</td>
-                    <td>0.9612</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '12px 18px' }}>CatBoost</td>
-                    <td>0.8757</td>
-                    <td>0.7319</td>
-                    <td>84.10%</td>
-                    <td>0.6720</td>
-                    <td>0.9824</td>
-                  </tr>
+                  {(modelMetadata?.metrics_summary || [
+                    { Model: 'Logistic Regression', 'ROC-AUC': 0.8773, 'PR-AUC': 0.7441, Accuracy: 0.8223, Precision: 0.699, Recall: 0.9597, 'F1-Score': 0.8089, Train_Time_Sec: 1.05 },
+                    { Model: 'CatBoost', 'ROC-AUC': 0.8755, 'PR-AUC': 0.7383, Accuracy: 0.8306, Precision: 0.7054, Recall: 0.9751, 'F1-Score': 0.8186, Train_Time_Sec: 6.35 },
+                    { Model: 'LightGBM', 'ROC-AUC': 0.8721, 'PR-AUC': 0.7249, Accuracy: 0.8292, Precision: 0.7048, Recall: 0.9707, 'F1-Score': 0.8166, Train_Time_Sec: 0.41 },
+                    { Model: 'XGBoost', 'ROC-AUC': 0.8672, 'PR-AUC': 0.7129, Accuracy: 0.8237, Precision: 0.7011, Recall: 0.959, 'F1-Score': 0.81, Train_Time_Sec: 0.5 },
+                    { Model: 'Random Forest', 'ROC-AUC': 0.8639, 'PR-AUC': 0.7064, Accuracy: 0.8231, Precision: 0.6983, Recall: 0.9663, 'F1-Score': 0.8107, Train_Time_Sec: 0.53 }
+                  ]).map((item) => (
+                    <tr 
+                      key={item.Model} 
+                      style={{ 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                        background: selectedBenchmarkModel === item.Model ? 'rgba(59,130,246,0.1)' : 'transparent',
+                        fontWeight: selectedBenchmarkModel === item.Model ? 600 : 400,
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => setSelectedBenchmarkModel(item.Model)}
+                    >
+                      <td style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{item.Model}</span>
+                        {item.Model === modelMetadata?.selected_model && (
+                          <span style={{ fontSize: '0.72em', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', padding: '2px 6px', borderRadius: '4px' }}>Active</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>{item['ROC-AUC']?.toFixed(4)}</td>
+                      <td style={{ textAlign: 'center' }}>{item['PR-AUC']?.toFixed(4)}</td>
+                      <td style={{ textAlign: 'center' }}>{typeof item.Accuracy === 'number' ? (item.Accuracy * 100).toFixed(1) + '%' : item.Accuracy}</td>
+                      <td style={{ textAlign: 'center' }}>{item.Precision?.toFixed(4)}</td>
+                      <td style={{ textAlign: 'center' }}>{item.Recall?.toFixed(4)}</td>
+                      <td style={{ textAlign: 'center' }}>{item['F1-Score']?.toFixed(4) || item.F1?.toFixed(4)}</td>
+                      <td style={{ textAlign: 'center' }}>{item.Train_Time_Sec || item.train_time || '—'}s</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Model Features list */}
+            {modelMetadata?.features_list && (
+              <div className="glass-card">
+                <h3 style={{ margin: '0 0 12px 0' }}>Training Features Store Schema ({modelMetadata.features_list.length} total features)</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {modelMetadata.features_list.map((feat) => (
+                    <span 
+                      key={feat} 
+                      style={{ fontSize: '0.76em', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#cbd5e1', padding: '4px 10px', borderRadius: '15px' }}
+                    >
+                      {feat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
