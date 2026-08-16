@@ -745,15 +745,32 @@ def get_fleet_alerts(current_user: dict = Depends(get_current_user)):
                 if current_user["department"] != dept:
                     continue
                     
+            dtype = dev.get("device_type", "")
+            # Infer department
+            dept = "General Ward"
+            if dtype in ["Ventilator", "Defibrillator", "Patient monitor", "Anesthesia machine"]:
+                dept = "Intensive Care Unit (ICU)"
+            elif dtype in ["CT scanner", "MRI scanner", "Ultrasound machine", "X-ray machine", "Mammography machine"]:
+                dept = "Radiology Department"
+            elif dtype in ["PCR machine", "Centrifuge", "Blood analyzer", "Hematology analyzer"]:
+                dept = "Clinical Laboratory"
+            elif dtype in ["Surgical lights", "Surgical operating table", "Robotic surgical system"]:
+                dept = "Operating Rooms (OR)"
+
             alerts.append({
+                "alert_id": f"alert_{d_id}",
                 "device_id": d_id,
                 "device_type": dev.get("device_type"),
                 "manufacturer": dev.get("manufacturer"),
+                "department": dept,
                 "risk_level": risk,
                 "overall_health": dev.get("overall_health"),
                 "failure_probability": dev.get("failure_probability"),
+                "anomaly_score": dev.get("anomaly", {}).get("score", 0),
+                "root_cause": dev.get("root_cause", {}).get("primary"),
                 "primary_root_cause": dev.get("root_cause", {}).get("primary"),
-                "recommended_action": dev.get("maintenance", {}).get("recommended_action")
+                "recommended_action": dev.get("maintenance", {}).get("recommended_action"),
+                "status": "active"
             })
             
     alerts = sorted(alerts, key=lambda x: -x["failure_probability"])
