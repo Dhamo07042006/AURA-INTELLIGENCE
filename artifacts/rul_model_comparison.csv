@@ -1,4 +1,4 @@
 Model,MAE,RMSE,R2,Train_Time_Sec
-Random Forest Regressor,223.2575,311.3542,-0.123,2.42
-LightGBM Regressor,203.6277,294.3211,-0.0035,0.48
-XGBoost Regressor,228.4223,333.0338,-0.2848,0.83
+Random Forest Regressor,222.3958,307.5313,-0.1451,2.37
+LightGBM Regressor,196.4018,282.1086,0.0364,0.16
+XGBoost Regressor,224.6996,319.9129,-0.2392,0.42
