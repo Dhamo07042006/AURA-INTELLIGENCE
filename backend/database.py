@@ -5,10 +5,10 @@ import hashlib
 import datetime
 import math
 
-DB_PATH = r"C:\Users\Dhamodaran G\Desktop\CTS\models\aura_intelligence.db"
+from backend.config import DB_PATH
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 

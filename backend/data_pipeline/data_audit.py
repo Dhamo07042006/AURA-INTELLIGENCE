@@ -3,9 +3,11 @@ import numpy as np
 import json
 import os
 
+from backend.config import RAW_DIR, BASE_DIR
+
 def run_data_audit():
-    data_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\data\raw"
-    artifacts_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\artifacts"
+    data_dir = str(RAW_DIR)
+    artifacts_dir = str(BASE_DIR / "artifacts")
     
     os.makedirs(artifacts_dir, exist_ok=True)
     

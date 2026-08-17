@@ -58,3 +58,4 @@ frontend/dist/
 *.db
 data/uploaded_datasets/
 data/knowledge_base/
+catboost_info/

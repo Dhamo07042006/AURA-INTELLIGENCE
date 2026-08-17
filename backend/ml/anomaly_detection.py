@@ -5,9 +5,11 @@ import json
 import pickle
 from sklearn.ensemble import IsolationForest
 
+from backend.config import PROCESSED_DIR, MODELS_DIR
+
 def run_anomaly_detection():
-    processed_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\data\processed"
-    models_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+    processed_dir = str(PROCESSED_DIR)
+    models_dir = str(MODELS_DIR)
     
     os.makedirs(models_dir, exist_ok=True)
     

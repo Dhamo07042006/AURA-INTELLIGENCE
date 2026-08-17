@@ -12,9 +12,11 @@ from backend.ml.component_health import calculate_component_health
 from backend.ml.root_cause import analyze_root_cause
 from backend.rag.maintenance_advisor import RAGMaintenanceAdvisor
 
+from backend.config import PROCESSED_DIR, MODELS_DIR
+
 def precompute_all_device_cache():
-    processed_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\data\processed"
-    models_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+    processed_dir = str(PROCESSED_DIR)
+    models_dir = str(MODELS_DIR)
     
     parquet_path = os.path.join(processed_dir, "device_feature_store.parquet")
     if not os.path.exists(parquet_path):

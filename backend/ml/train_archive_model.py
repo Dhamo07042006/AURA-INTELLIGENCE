@@ -9,8 +9,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 from catboost import CatBoostClassifier
 
-ARCHIVE_DIR = r"C:\Users\Dhamodaran G\Downloads\archive (24)"
-MODELS_DIR = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+from backend.config import MODELS_DIR
+
+ARCHIVE_DIR = os.getenv("CTS_ARCHIVE_DIR", r"C:\Users\Dhamodaran G\Downloads\archive (24)")
+MODELS_DIR = str(MODELS_DIR)
 
 def load_and_preprocess_archive_dataset(archive_dir=ARCHIVE_DIR):
     dev_path = os.path.join(archive_dir, "devices-1681209661.csv")
@@ -94,7 +96,7 @@ def train_archive_model(algorithm="Random Forest", archive_dir=ARCHIVE_DIR):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=strat)
 
     if algorithm == "CatBoost":
-        model = CatBoostClassifier(iterations=150, learning_rate=0.1, depth=6, verbose=0, random_state=42)
+        model = CatBoostClassifier(iterations=150, learning_rate=0.1, depth=6, verbose=0, allow_writing_files=False, random_state=42)
     elif algorithm == "Logistic Regression":
         model = LogisticRegression(max_iter=500, class_weight='balanced', random_state=42)
     else: # Random Forest (Default)

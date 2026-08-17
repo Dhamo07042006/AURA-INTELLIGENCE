@@ -5,11 +5,12 @@ import random
 import os
 import json
 
+from backend.config import MODELS_DIR
 from backend.ml.inference import MedicalDeviceInferenceEngine
 
 class SimulatedHospitalConnection:
     def __init__(self):
-        self.state_file = r"C:\Users\Dhamodaran G\Desktop\CTS\models\hospital_connection_state.json"
+        self.state_file = str(MODELS_DIR / "hospital_connection_state.json")
         self.inference_engine = MedicalDeviceInferenceEngine()
         
     def _get_default_state(self):

@@ -3,11 +3,12 @@ import json
 import uuid
 import datetime
 import re
+from backend.config import DATA_DIR
 from backend.database import get_db_connection
 
 class KnowledgeBaseManager:
     def __init__(self):
-        self.doc_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\data\knowledge_base"
+        self.doc_dir = str(DATA_DIR / "knowledge_base")
         os.makedirs(self.doc_dir, exist_ok=True)
         
     def upload_document(self, file_name, file_content, device_type, manufacturer, version, hospital_id: str, uploaded_by: str) -> dict:

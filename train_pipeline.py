@@ -5,8 +5,8 @@ import time
 # Ensure workspace root is in python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from backend.ml.data_audit import run_data_audit
-from backend.ml.build_feature_store import run_build_feature_store
+from backend.data_pipeline.data_audit import run_data_audit
+from backend.data_pipeline.build_feature_store import run_build_feature_store
 from backend.ml.component_ontology import run_component_ontology
 from backend.ml.train_classifier import run_train_classifier
 from backend.ml.train_rul import run_train_rul

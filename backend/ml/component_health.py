@@ -3,12 +3,14 @@ import numpy as np
 import os
 import json
 
+from backend.config import MODELS_DIR
+
 def get_component_weights(device_type):
     critical = ["battery", "power supply", "power unit", "control board", "drive motor", "oxygen system", "compressor", "pump"]
     sensors = ["sensor", "temperature sensor", "pressure sensor", "flow sensor", "lead cable", "electrode set", "ecg sensor"]
     
     weights = {}
-    models_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+    models_dir = str(MODELS_DIR)
     ontology_path = os.path.join(models_dir, "component_ontology.json")
     
     components = []

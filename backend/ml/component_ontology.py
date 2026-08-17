@@ -3,9 +3,11 @@ import numpy as np
 import os
 import json
 
+from backend.config import RAW_DIR, MODELS_DIR
+
 def run_component_ontology():
-    data_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\data\raw"
-    models_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+    data_dir = str(RAW_DIR)
+    models_dir = str(MODELS_DIR)
     
     os.makedirs(models_dir, exist_ok=True)
     

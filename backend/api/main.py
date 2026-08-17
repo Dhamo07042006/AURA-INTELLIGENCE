@@ -17,7 +17,7 @@ from backend.services.mqtt_service import mqtt_service, ingestion_queue
 from backend.streaming.replay_engine import replay_engine
 from backend.ml.inference import MedicalDeviceInferenceEngine
 from backend.knowledge_graph.graph_engine import MedicalDeviceGraphEngine
-from backend.ml.dataset_manager import DatasetManager
+from backend.data_pipeline.dataset_manager import DatasetManager
 from backend.rag.knowledge_base_manager import KnowledgeBaseManager
 
 app = FastAPI(
@@ -35,8 +35,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.config import MODELS_DIR
+
 # Paths
-MODELS_DIR = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+MODELS_DIR = str(MODELS_DIR)
 CACHE_PATH = os.path.join(MODELS_DIR, "device_latest_cache.json")
 
 # In-memory caches and global engines

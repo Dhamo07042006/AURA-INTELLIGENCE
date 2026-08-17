@@ -4,10 +4,12 @@ import os
 import networkx as nx
 import json
 
+from backend.config import RAW_DIR, MODELS_DIR
+
 class MedicalDeviceGraphEngine:
     def __init__(self):
-        self.data_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\data\raw"
-        self.models_dir = r"C:\Users\Dhamodaran G\Desktop\CTS\models"
+        self.data_dir = str(RAW_DIR)
+        self.models_dir = str(MODELS_DIR)
         
         self.df_info = None
         self.df_fail = None
