@@ -1158,6 +1158,7 @@ export default function App() {
   // Role-Based Navigation Visibility
   const hasPageAccess = (tab) => {
     if (!currentUser) return false;
+    if (tab === 'graph') return false; // Root Cause Graph page disabled across all roles
     return true;
   };
 
@@ -1412,15 +1413,6 @@ export default function App() {
             >
               <Brain size={18} />
               <span>Machine Failure ML Predictor</span>
-            </button>
-          )}
-          {hasPageAccess('graph') && (
-            <button 
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'graph' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'graph' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('graph')}
-            >
-              <Brain size={18} />
-              <span>Root Cause Graph</span>
             </button>
           )}
           {hasPageAccess('advisor') && (
