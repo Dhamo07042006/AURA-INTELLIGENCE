@@ -74,9 +74,9 @@ export default function App() {
   const [mqttTopic, setMqttTopic] = useState('hospital/demo-hospital/+/+/+');
   const [mqttStatus, setMqttStatus] = useState('Disconnected');
 
-  // Real-time metrics
   const [liveLogs, setLiveLogs] = useState([]);
   const [isLiveLogsPaused, setIsLiveLogsPaused] = useState(false);
+  const [liveFeedPage, setLiveFeedPage] = useState(1);
   const [liveStreamRate, setLiveStreamRate] = useState(0);
   const [toasts, setToasts] = useState([]);
   const [alertSearchQuery, setAlertSearchQuery] = useState('');
@@ -498,7 +498,15 @@ export default function App() {
               rul_days: updatedDev.predicted_failure_time_days || null,
               _fullData: updatedDev
             };
-            setLiveLogs(prev => [newLog, ...prev].slice(0, 200));
+            setLiveLogs(prev => {
+              if (prev.length > 0) {
+                const latest = prev[0];
+                if (latest.device_id === newLog.device_id && (latest.timestamp === newLog.timestamp || Math.abs((latest.overall_health || 0) - (newLog.overall_health || 0)) < 0.001)) {
+                  return prev; // Skip sequential duplicate telemetry frame
+                }
+              }
+              return [newLog, ...prev].slice(0, 200);
+            });
           }
           
           // 5. Refresh aggregates
@@ -1654,6 +1662,26 @@ export default function App() {
                   <h3 style={{ margin: 0 }}>Live ML Predictions — Real-time Telemetry Feed</h3>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  {/* Stream Pause / Stop Button */}
+                  <button 
+                    style={{
+                      background: isLiveLogsPaused ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                      border: `1px solid ${isLiveLogsPaused ? '#10b981' : '#ef4444'}`,
+                      color: isLiveLogsPaused ? '#34d399' : '#f87171',
+                      borderRadius: '6px',
+                      padding: '5px 12px',
+                      fontSize: '0.8em',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                    onClick={() => setIsLiveLogsPaused(!isLiveLogsPaused)}
+                  >
+                    {isLiveLogsPaused ? '▶ RESUME AUTOMATIC STREAM' : '⏹ STOP AUTOMATIC STREAM'}
+                  </button>
+
                   <span style={{ fontSize: '0.75em', color: '#94a3b8' }}>
                     {liveLogs.filter(l => l.risk_level === 'CRITICAL').length > 0 && (
                       <span style={{ color: '#ef4444', fontWeight: 700, marginRight: '8px' }}>🔴 {liveLogs.filter(l => l.risk_level === 'CRITICAL').length} CRITICAL</span>
@@ -1668,73 +1696,132 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              <div style={{ maxHeight: '320px', overflowY: 'auto', fontSize: '0.82em' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', color: '#64748b', fontSize: '0.8em', position: 'sticky', top: 0, background: 'rgba(15,23,42,0.95)' }}>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Time</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Device ID</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Type / Dept</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Health</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Risk</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Anomaly</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Root Cause (ML)</th>
-                      <th style={{ padding: '8px 6px', textAlign: 'left' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {liveLogs.slice(0, 20).map((log, i) => (
-                      <tr
-                        key={log.log_id || i}
-                        style={{
-                          borderBottom: '1px solid rgba(255,255,255,0.03)',
-                          background: log.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.05)' : log.risk_level === 'HIGH' ? 'rgba(249,115,22,0.04)' : 'transparent',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => { setSelectedDeviceId(log.device_id); if (log._fullData) setDeviceData(log._fullData); setActiveTab('twin'); }}
-                        title="Click to open Digital Twin"
-                      >
-                        <td style={{ padding: '7px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>{log.timestamp}</td>
-                        <td style={{ padding: '7px 6px', fontWeight: 700, color: log.risk_level === 'CRITICAL' ? '#f87171' : '#818cf8' }}>{log.device_id}</td>
-                        <td style={{ padding: '7px 6px' }}>
-                          <div style={{ fontWeight: 500 }}>{log.device_type}</div>
-                          <div style={{ fontSize: '0.8em', color: '#64748b' }}>{log.department}</div>
-                        </td>
-                        <td style={{ padding: '7px 6px', fontWeight: 700, color: getHealthColor(log.overall_health) }}>
-                          {log.overall_health != null ? log.overall_health.toFixed(1) + '%' : '—'}
-                        </td>
-                        <td style={{ padding: '7px 6px' }}>{getRiskBadge(log.risk_level)}</td>
-                        <td style={{ padding: '7px 6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <div style={{ width: '50px', height: '5px', borderRadius: '3px', background: '#1e293b', overflow: 'hidden' }}>
-                              <div style={{ width: `${log.anomaly_score || 0}%`, height: '100%', background: (log.anomaly_score || 0) > 60 ? '#ef4444' : (log.anomaly_score || 0) > 35 ? '#f97316' : '#10b981' }}></div>
-                            </div>
-                            <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{log.anomaly_score != null ? log.anomaly_score.toFixed(0) : '—'}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '7px 6px', color: log.risk_level === 'CRITICAL' ? '#f87171' : log.risk_level === 'HIGH' ? '#fb923c' : '#94a3b8', fontWeight: log.risk_level === 'CRITICAL' ? 700 : 400 }}>
-                          {log.root_cause || '—'}
-                        </td>
-                        <td style={{ padding: '7px 6px', color: log.risk_level === 'CRITICAL' || log.risk_level === 'HIGH' ? '#fbbf24' : '#10b981', maxWidth: '180px', fontSize: '0.8em' }}>
-                          {log.risk_level === 'CRITICAL' ? '🚨 ' : log.risk_level === 'HIGH' ? '⚠️ ' : '✔ '}{log.recommended_action || 'Nominal'}
-                          {log.rul_days && log.rul_days < 30 ? <span style={{ color: '#ef4444', fontWeight: 700, marginLeft: '4px' }}> [{log.rul_days}d]</span> : null}
-                        </td>
-                      </tr>
-                    ))}
-                    {liveLogs.length === 0 && (
-                      <tr>
-                        <td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <Activity size={28} color="#334155" />
-                            <div>Waiting for live telemetry from LOGx streamer...</div>
-                            <div style={{ fontSize: '0.85em' }}>Start the LOGx generator to see real-time ML predictions here</div>
-                          </div>
-                        </td>
-                      </tr>
+
+              {/* Table with Pagination of Size 10 */}
+              {(() => {
+                const pageSize = 10;
+                const totalPages = Math.ceil(liveLogs.length / pageSize) || 1;
+                const currentPage = Math.min(liveFeedPage, totalPages);
+                const paginatedLogs = liveLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+                return (
+                  <>
+                    <div style={{ minHeight: '320px', overflowX: 'auto', fontSize: '0.82em' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', color: '#64748b', fontSize: '0.8em', background: 'rgba(15,23,42,0.95)' }}>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Time</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Device ID</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Type / Dept</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Health</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Risk</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Anomaly</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Root Cause (ML)</th>
+                            <th style={{ padding: '8px 6px', textAlign: 'left' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedLogs.map((log, i) => (
+                            <tr
+                              key={log.log_id || i}
+                              style={{
+                                borderBottom: '1px solid rgba(255,255,255,0.03)',
+                                background: log.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.05)' : log.risk_level === 'HIGH' ? 'rgba(249,115,22,0.04)' : 'transparent',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => { setSelectedDeviceId(log.device_id); if (log._fullData) setDeviceData(log._fullData); setActiveTab('twin'); }}
+                              title="Click to open Digital Twin"
+                            >
+                              <td style={{ padding: '7px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>{log.timestamp}</td>
+                              <td style={{ padding: '7px 6px', fontWeight: 700, color: log.risk_level === 'CRITICAL' ? '#f87171' : '#818cf8' }}>{log.device_id}</td>
+                              <td style={{ padding: '7px 6px' }}>
+                                <div style={{ fontWeight: 500 }}>{log.device_type}</div>
+                                <div style={{ fontSize: '0.8em', color: '#64748b' }}>{log.department}</div>
+                              </td>
+                              <td style={{ padding: '7px 6px', fontWeight: 700, color: getHealthColor(log.overall_health) }}>
+                                {log.overall_health != null ? log.overall_health.toFixed(1) + '%' : '—'}
+                              </td>
+                              <td style={{ padding: '7px 6px' }}>{getRiskBadge(log.risk_level)}</td>
+                              <td style={{ padding: '7px 6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <div style={{ width: '50px', height: '5px', borderRadius: '3px', background: '#1e293b', overflow: 'hidden' }}>
+                                    <div style={{ width: `${log.anomaly_score || 0}%`, height: '100%', background: (log.anomaly_score || 0) > 60 ? '#ef4444' : (log.anomaly_score || 0) > 35 ? '#f97316' : '#10b981' }}></div>
+                                  </div>
+                                  <span style={{ color: '#94a3b8', fontSize: '0.85em' }}>{log.anomaly_score != null ? log.anomaly_score.toFixed(0) : '—'}</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '7px 6px', color: log.risk_level === 'CRITICAL' ? '#f87171' : log.risk_level === 'HIGH' ? '#fb923c' : '#94a3b8', fontWeight: log.risk_level === 'CRITICAL' ? 700 : 400 }}>
+                                {log.root_cause || '—'}
+                              </td>
+                              <td style={{ padding: '7px 6px', color: log.risk_level === 'CRITICAL' || log.risk_level === 'HIGH' ? '#fbbf24' : '#10b981', maxWidth: '180px', fontSize: '0.8em' }}>
+                                {log.risk_level === 'CRITICAL' ? '🚨 ' : log.risk_level === 'HIGH' ? '⚠️ ' : '✔ '}{log.recommended_action || 'Nominal'}
+                                {log.rul_days && log.rul_days < 30 ? <span style={{ color: '#ef4444', fontWeight: 700, marginLeft: '4px' }}> [{log.rul_days}d]</span> : null}
+                              </td>
+                            </tr>
+                          ))}
+                          {liveLogs.length === 0 && (
+                            <tr>
+                              <td colSpan="8" style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                  <Activity size={28} color="#334155" />
+                                  <div>Waiting for live telemetry from LOGx streamer...</div>
+                                  <div style={{ fontSize: '0.85em' }}>Start the LOGx generator to see real-time ML predictions here</div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination Controls Bar */}
+                    {liveLogs.length > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '0.82em' }}>
+                        <span style={{ color: '#94a3b8' }}>
+                          Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, liveLogs.length)} of {liveLogs.length} logs
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            disabled={currentPage === 1}
+                            onClick={() => setLiveFeedPage(prev => Math.max(1, prev - 1))}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #334155',
+                              background: currentPage === 1 ? 'rgba(30,41,59,0.3)' : '#1e293b',
+                              color: currentPage === 1 ? '#64748b' : '#f8fafc',
+                              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            Previous
+                          </button>
+
+                          <span style={{ padding: '0 8px', fontWeight: 700, color: '#60a5fa' }}>
+                            Page {currentPage} of {totalPages}
+                          </span>
+
+                          <button
+                            disabled={currentPage >= totalPages}
+                            onClick={() => setLiveFeedPage(prev => Math.min(totalPages, prev + 1))}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #334155',
+                              background: currentPage >= totalPages ? 'rgba(30,41,59,0.3)' : '#1e293b',
+                              color: currentPage >= totalPages ? '#64748b' : '#f8fafc',
+                              cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                              fontWeight: 600
+                            }}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
                     )}
-                  </tbody>
-                </table>
-              </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
