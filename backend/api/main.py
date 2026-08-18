@@ -514,10 +514,21 @@ def list_knowledge_sources(current_user: dict = Depends(get_current_user)):
 # ==========================================
 
 @app.get("/api/v1/audit/logs")
-def get_audit_logs(current_user: dict = Depends(RoleChecker(["HOSPITAL_ADMIN", "AUDITOR"]))):
+def get_audit_logs(current_user: dict = Depends(get_current_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM audit_logs WHERE hospital_id = ? ORDER BY timestamp DESC LIMIT 500", (current_user["hospital_id"],))
+    
+    role = current_user.get("role", "")
+    username = current_user.get("username", "")
+    h_id = current_user.get("hospital_id", "demo-hospital")
+    
+    # Admin roles can view all audit trails across all users & roles
+    if role in ["ADMIN", "HOSPITAL_ADMIN", "AUDITOR"]:
+        cursor.execute("SELECT * FROM audit_logs WHERE hospital_id = ? ORDER BY timestamp DESC LIMIT 500", (h_id,))
+    else:
+        # Non-admin roles view ONLY their own audit logs
+        cursor.execute("SELECT * FROM audit_logs WHERE hospital_id = ? AND (username = ? OR user_id = ?) ORDER BY timestamp DESC LIMIT 500", (h_id, username, username))
+        
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return clean_nans(rows)
@@ -596,12 +607,26 @@ def list_devices(
         devices = [d for d in devices if is_dept_match(d.get("device_type"))]
         
     if device_type:
-        devices = [d for d in devices if d.get("device_type", "").lower() == device_type.lower()]
+        dt_target = device_type.strip().lower().replace("_", " ")
+        devices = [
+            d for d in devices 
+            if dt_target in str(d.get("device_type", "")).strip().lower().replace("_", " ")
+        ]
     if risk_level:
-        devices = [d for d in devices if d.get("risk_level", "").lower() == risk_level.lower()]
+        rl_target = risk_level.strip().upper()
+        devices = [
+            d for d in devices 
+            if str(d.get("risk_level", "")).strip().upper() == rl_target
+        ]
     if search:
-        s_lower = search.lower()
-        devices = [d for d in devices if s_lower in d.get("device_id", "").lower() or s_lower in d.get("manufacturer", "").lower()]
+        s_lower = search.strip().lower()
+        devices = [
+            d for d in devices 
+            if s_lower in str(d.get("device_id", "")).lower() 
+            or s_lower in str(d.get("manufacturer", "")).lower()
+            or s_lower in str(d.get("device_type", "")).lower()
+            or s_lower in str(d.get("department", "")).lower()
+        ]
         
     risk_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     devices = sorted(devices, key=lambda x: (risk_order.get(x.get("risk_level", "LOW"), 4), -x.get("failure_probability", 0.0)))
@@ -1440,6 +1465,51 @@ def retrain_model_pipeline(current_user: dict = Depends(RoleChecker(["HOSPITAL_A
     )
     
     return {"success": True, "message": "ML Pipeline retraining triggered"}
+
+@app.post("/api/v1/model/train-archive-3")
+async def train_archive_3_endpoint(current_user: dict = Depends(get_current_user)):
+    from backend.ml.train_classifier import train_archive_3_datasets
+    res = train_archive_3_datasets()
+    
+    log_audit_event(
+        user_id=current_user["username"],
+        username=current_user["username"],
+        hospital_id=current_user["hospital_id"],
+        action="ARCHIVE_3_DATASETS_TRAINED",
+        resource_type="ml_pipeline",
+        resource_id="3_datasets_model",
+        success=res.get("success", False)
+    )
+    
+    return clean_nans(res)
+
+class TrainUploadedPayload(BaseModel):
+    dataset_id: Optional[str] = None
+
+@app.post("/api/v1/model/train-uploaded")
+async def train_uploaded_dataset(payload: Optional[TrainUploadedPayload] = None, current_user: dict = Depends(get_current_user)):
+    from backend.ml.train_classifier import train_uploaded_csv_dataset
+    try:
+        dataset_id = payload.dataset_id if payload else None
+        metadata = train_uploaded_csv_dataset(dataset_id=dataset_id)
+        
+        log_audit_event(
+            user_id=current_user["username"],
+            username=current_user["username"],
+            hospital_id=current_user["hospital_id"],
+            action="MODEL_TRAINED_ON_UPLOADED_DATASET",
+            resource_type="ml_model",
+            resource_id="classification_model",
+            success=True
+        )
+        return clean_nans({
+            "success": True,
+            "message": "Model retrained successfully on uploaded dataset!",
+            "metadata": metadata
+        })
+    except Exception as e:
+        print(f"[TRAIN UPLOADED ERR] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/model/predict")
 async def predict_model_prompt(payload: ModelPredictPayload, current_user: dict = Depends(get_current_user)):

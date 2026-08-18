@@ -1,0 +1,68 @@
+{
+  "success": true,
+  "training_timestamp": "2026-08-18 11:23:26.152244",
+  "dataset_source": "Merged devices-1681209661 + manufacturers-1681209657 + events-1681209680",
+  "total_merged_records": 124969,
+  "best_model": "LightGBM",
+  "models_matrix": [
+    {
+      "model_name": "LightGBM",
+      "roc_auc": 0.9598,
+      "pr_auc": 0.8335,
+      "accuracy": "90.4%",
+      "precision": 0.6966,
+      "recall": 0.9693,
+      "f1_score": 0.8107,
+      "train_time": "0.05s"
+    },
+    {
+      "model_name": "XGBoost",
+      "roc_auc": 0.959,
+      "pr_auc": 0.8328,
+      "accuracy": "90.5%",
+      "precision": 0.7078,
+      "recall": 0.9399,
+      "f1_score": 0.8075,
+      "train_time": "0.13s"
+    },
+    {
+      "model_name": "Random Forest",
+      "roc_auc": 0.9584,
+      "pr_auc": 0.8297,
+      "accuracy": "90.4%",
+      "precision": 0.7178,
+      "recall": 0.8998,
+      "f1_score": 0.7985,
+      "train_time": "0.33s"
+    },
+    {
+      "model_name": "CatBoost",
+      "roc_auc": 0.9552,
+      "pr_auc": 0.8181,
+      "accuracy": "90.4%",
+      "precision": 0.695,
+      "recall": 0.9752,
+      "f1_score": 0.8116,
+      "train_time": "0.19s"
+    },
+    {
+      "model_name": "Logistic Regression",
+      "roc_auc": 0.908,
+      "pr_auc": 0.6379,
+      "accuracy": "88.0%",
+      "precision": 0.6655,
+      "recall": 0.8774,
+      "f1_score": 0.7569,
+      "train_time": "0.08s"
+    }
+  ],
+  "fda_breakdown": {
+    "class3_pct": 1.9,
+    "class3_count": 2414,
+    "class2_pct": 21.1,
+    "class2_count": 26371,
+    "class1_pct": 77.0,
+    "class1_count": 96184,
+    "total_records": 124969
+  }
+}
