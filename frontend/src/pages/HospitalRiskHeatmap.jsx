@@ -4,7 +4,7 @@ export default function HospitalRiskHeatmap({ departments, getHealthColor, getRi
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
-        <h1 style={{ margin: 0, fontSize: '2em' }}>Hospital Department Risk Heatmap</h1>
+        <h1 style={{ margin: 0, fontSize: '2em' }}>Hospital Department Risk Overview</h1>
         <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Fleet operational status grouped by physical locations</p>
       </div>
 

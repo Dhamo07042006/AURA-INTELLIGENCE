@@ -49,7 +49,7 @@ export default function Sidebar({ activeTab, setActiveTab, hasPageAccess, alerts
             onClick={() => setActiveTab('heatmap')}
           >
             <MapPin size={18} />
-            <span>Hospital Risk Heatmap</span>
+            <span>Hospital Risk Overview</span>
           </button>
         )}
         {hasPageAccess('prediction') && (
@@ -125,7 +125,7 @@ export default function Sidebar({ activeTab, setActiveTab, hasPageAccess, alerts
           onClick={() => setActiveTab('alerts')}
         >
           <AlertOctagon size={18} />
-          <span>Fleet Alerts <span style={{ background: '#ef4444', color: 'white', fontSize: '0.8em', padding: '1px 6px', borderRadius: '4px', marginLeft: '5px' }}>{alerts.filter(a => a.status === 'active').length}</span></span>
+          <span>Fleet Alerts <span style={{ background: '#ef4444', color: 'white', fontSize: '0.8em', padding: '1px 6px', borderRadius: '4px', marginLeft: '5px' }}>{(alerts || []).filter(a => a.status !== 'acknowledged' && a.status !== 'ACKNOWLEDGED').length}</span></span>
         </button>
       </div>
 

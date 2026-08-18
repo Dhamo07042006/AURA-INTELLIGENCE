@@ -258,8 +258,7 @@ def get_live_alerts(current_user: dict = Depends(get_current_user)):
 
 @app.post("/api/v1/live/alerts/{alert_id}/acknowledge")
 def acknowledge_alert(alert_id: int, current_user: dict = Depends(get_current_user)):
-    # Operators and engineers can acknowledge alerts
-    if current_user["role"] not in ["HOSPITAL_ADMIN", "BIOMEDICAL_ENGINEER", "DEPARTMENT_OPERATOR"]:
+    if current_user["role"] not in ["HOSPITAL_ADMIN", "ADMIN", "BIOMED_ENGINEER", "BIOMEDICAL_ENGINEER", "CLINICAL_OPERATOR", "DEPARTMENT_OPERATOR", "AUDITOR"]:
         raise HTTPException(status_code=403, detail="Unauthorized action")
         
     conn = get_db_connection()

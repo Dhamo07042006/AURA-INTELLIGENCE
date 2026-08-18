@@ -913,13 +913,13 @@ export default function App() {
 
   const acknowledgeAlert = async (alertId) => {
     try {
+      setAlerts(prev => prev.filter(a => a.alert_id !== alertId && a.id !== alertId && a.device_id !== alertId));
       const res = await authFetch(`${API_BASE}/live/alerts/${alertId}/acknowledge`, { method: 'POST' });
       if (res.ok) {
-        fetchAlerts();
         fetchAuditLogs();
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error acknowledging alert:", e);
     }
   };
 
@@ -1810,7 +1810,7 @@ export default function App() {
                 <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Active risks requiring biomedical response</p>
               </div>
               <span className="badge badge-critical" style={{ fontSize: '0.9em' }}>
-                {alerts.filter(a => a.status === 'active').length} Active Alerts
+                {alerts.filter(a => a.status !== 'acknowledged' && a.status !== 'ACKNOWLEDGED').length} Active Alerts
               </span>
             </div>
 
@@ -1846,7 +1846,7 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {alerts.filter(dev => {
+              {alerts.filter(a => a.status !== 'acknowledged' && a.status !== 'ACKNOWLEDGED').filter(dev => {
                 const matchesRisk = alertRiskFilter === 'ALL' || dev.risk_level === alertRiskFilter;
                 const q = alertSearchQuery.toLowerCase().trim();
                 const matchesSearch = !q ||
