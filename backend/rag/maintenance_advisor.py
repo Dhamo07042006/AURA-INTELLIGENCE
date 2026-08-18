@@ -8,6 +8,85 @@ from sklearn.metrics.pairwise import cosine_similarity
 from backend.config import RAW_DIR
 from backend.database import get_db_connection
 
+def validate_rag_grounding(query: str, device_type: str, advice: dict) -> dict:
+    q_lower = str(query or "").lower().strip()
+    evidence_text = str(advice.get("evidence", "") or advice.get("recommended_action", "")).lower()
+    
+    # 1. Common off-topic patterns (trivia, geography, sports, jokes, general knowledge)
+    off_topic_patterns = [
+        r"\bcapital\s+of\b", r"\bwho\s+is\b", r"\bwhere\s+is\b", r"\bpresident\s+of\b",
+        r"\bpopulation\s+of\b", r"\bprime\s+minister\b", r"\btell\s+me\s+a\s+joke\b",
+        r"\bweather\s+in\b", r"\bhow\s+to\s+cook\b", r"\brecipe\s+for\b", r"\bwrite\s+a?\s*code\b",
+        r"\bmovie\s+about\b", r"\bsong\s+by\b", r"\bwhat\s+is\s+\d+\s*[\+\-\*\/]\s*\d+",
+        r"\bmeaning\s+of\s+life\b", r"\bcapital\s+city\b"
+    ]
+    
+    if "capital expenditure" not in q_lower and "capital cost" not in q_lower:
+        for pattern in off_topic_patterns:
+            if re.search(pattern, q_lower):
+                advice["recommended_action"] = "Non specific content"
+                advice["found"] = False
+                advice["evidence"] = "Query identified as non-equipment trivia or off-topic."
+                return advice
+
+    # 2. Invention / History / Authorship intent verification against retrieved evidence
+    invention_words = ["invent", "invented", "inventor", "inventend", "created", "discovered", "founder", "origin"]
+    if any(w in q_lower for w in invention_words):
+        if not any(w in evidence_text for w in ["invent", "inventor", "created by", "discovered", "einthoven"]):
+            advice["recommended_action"] = "Non specific content"
+            advice["found"] = False
+            advice["evidence"] = "The retrieved manual does not contain information about the invention or history."
+            return advice
+
+    author_words = ["author", "writer", "wrote", "compiled by", "prepared by"]
+    if any(w in q_lower for w in author_words):
+        if not any(w in evidence_text for w in ["author", "written by", "prepared by", "compiled by", "copyright"]):
+            advice["recommended_action"] = "Non specific content"
+            advice["found"] = False
+            advice["evidence"] = "The retrieved manual does not contain author metadata."
+            return advice
+
+    # 3. Multi-word intent match: If query has 2+ non-stopwords, ensure at least 2 distinct keywords match evidence
+    stopwords = {
+        "what", "is", "the", "of", "a", "an", "in", "on", "for", "to", "how", "do", "can",
+        "i", "me", "you", "tell", "show", "give", "device", "type", "manual", "who", "when",
+        "where", "why", "which", "please", "about", "with"
+    }
+    query_words = [w for w in re.findall(r'[a-z0-9]+', q_lower) if w not in stopwords and len(w) > 2]
+    
+    if len(query_words) >= 2:
+        def match_stem(w, text):
+            stem = w[:5] if len(w) >= 6 else w
+            return stem in text
+
+        matched_words = [w for w in query_words if match_stem(w, evidence_text)]
+        if len(set(matched_words)) < 2:
+            advice["recommended_action"] = "Non specific content"
+            advice["found"] = False
+            advice["evidence"] = "Partial keyword match insufficient to answer full query intent."
+            return advice
+
+    # 4. Domain keyword presence vs relevance score
+    domain_keywords = {
+        "battery", "power", "temperature", "temp", "sensor", "calibration", "calibrate", 
+        "troubleshoot", "troubleshooting", "error", "alarm", "leak", "pressure", "flow", 
+        "circuit", "voltage", "fuse", "replacement", "replace", "clean", "cleaning", 
+        "valve", "display", "firmware", "software", "occlusion", "noise", "cable", 
+        "electrode", "maintenance", "manual", "inspection", "inspect", "repair", "service",
+        "health", "degradation", "failure", "recall", "safety", "warning", "bci", "oxygen",
+        "ventilator", "pump", "monitor", "defibrillator", "ecg", "ekg", "ultrasound", "ct"
+    }
+
+    has_domain_word = any(w in domain_keywords for w in query_words)
+    
+    if not has_domain_word and advice.get("relevance_score", 0) < 0.35:
+        advice["recommended_action"] = "Non specific content"
+        advice["found"] = False
+        advice["evidence"] = "No medical equipment context matching this query."
+        return advice
+
+    return advice
+
 class RAGMaintenanceAdvisor:
     def __init__(self):
         self.data_dir = str(RAW_DIR)
@@ -165,9 +244,12 @@ class RAGMaintenanceAdvisor:
         # Build or check index
         self.build_index(hospital_id)
         
-        # Search query matching device type and root cause
-        query = f"{device_type} {root_cause}"
-        query_vec = self.vectorizer.transform([query])
+        # Search query based on user query string directly
+        query_text = str(root_cause or "").strip()
+        if not query_text:
+            query_text = str(device_type or "").strip()
+            
+        query_vec = self.vectorizer.transform([query_text])
         
         # Compute similarities
         similarities = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
@@ -188,31 +270,40 @@ class RAGMaintenanceAdvisor:
             matched_custom_indices = [idx for idx, m in enumerate(self.metadata) if m.get("is_custom")]
             
         if matched_custom_indices:
-            custom_similarities = [(idx, similarities[idx]) for idx in matched_custom_indices]
-            top_custom_idx, max_custom_score = max(custom_similarities, key=lambda x: x[1])
+            custom_similarities = sorted([(idx, similarities[idx]) for idx in matched_custom_indices], key=lambda x: x[1], reverse=True)
             
-            # If similarity meets baseline threshold, return matched manual chunk
-            if max_custom_score >= 0.05:
+            for top_custom_idx, max_custom_score in custom_similarities[:5]:
+                if max_custom_score < 0.12:
+                    break
+                    
                 match = self.metadata[top_custom_idx]
                 evidence = self.docs[top_custom_idx]
-                
-                # Synthesize via Groq LLM if key is configured
                 recommendation = match["action"]
+                
                 try:
                     from backend.services.grok_service import query_grok
-                    prompt = f"System Context: You are an expert Biomedical Engineering Maintenance Advisor.\n\n" \
+                    prompt = f"System Context: You are a strict Biomedical Engineering Maintenance Advisor.\n" \
+                             f"STRICT RULE: Only answer based on the provided document context below.\n" \
+                             f"If the query is off-topic, random, or not present in the document excerpt below, respond ONLY with: 'Non specific content'.\n\n" \
                              f"Device: {match['device_type']} ({match.get('manufacturer', 'Approved')})\n" \
                              f"Issue / Query: {root_cause}\n" \
                              f"Manual Source: {match['source']} (Section: {match.get('section', 'General')})\n" \
                              f"Manual Excerpt: {match['action']}\n\n" \
-                             f"Provide a clear, step-by-step technical maintenance instruction grounded strictly on the manual excerpt above. Keep it concise (2-4 bullet points)."
+                             f"Provide a clear technical maintenance instruction grounded strictly on the excerpt above. If not answered in excerpt, reply 'Non specific content'."
                     llm_reply = query_grok([{"role": "user", "content": prompt}], max_tokens=250)
-                    if llm_reply and len(llm_reply) > 20:
-                        recommendation = llm_reply.strip()
+                    if llm_reply and len(llm_reply) > 5:
+                        clean_llm = llm_reply.strip()
+                        if "non specific content" in clean_llm.lower():
+                            recommendation = "Non specific content"
+                        else:
+                            recommendation = clean_llm
                 except Exception as e:
                     print(f"Groq LLM synthesis note: {e}")
 
-                return {
+                if "non specific content" in str(recommendation).lower():
+                    continue
+
+                res_custom = {
                     "recommended_action": recommendation,
                     "source": match["source"],
                     "evidence": evidence,
@@ -223,25 +314,44 @@ class RAGMaintenanceAdvisor:
                     "is_custom": True,
                     "found": True
                 }
+                validated = validate_rag_grounding(query_text, device_type, res_custom)
+                if validated.get("found"):
+                    return validated
         
         # General Fallback across all documents
         top_idx = int(np.argmax(similarities))
         max_score = similarities[top_idx]
         
-        # Grounding check
-        if max_score < 0.1:
+        # Grounding relevance check: if query relevance score is below 0.12, return Non specific content
+        if max_score < 0.12:
             return {
-                "recommended_action": f"Inspect and replace degraded sub-components related to {root_cause} according to standard manufacturer guidelines for {device_type}.",
-                "source": "Approved Maintenance Manual",
-                "evidence": f"Relevance score ({max_score:.4f}) is below verification confidence thresholds.",
+                "recommended_action": "Non specific content",
+                "source": "None",
+                "evidence": f"No specific or relevant content found in the indexed manuals or documents for this query (Relevance Score: {max_score:.4f}).",
                 "confidence": "Low",
                 "relevance_score": round(float(max_score), 4),
-                "found": False
+                "found": False,
+                "non_specific": True
             }
             
         match = self.metadata[top_idx]
-        return {
-            "recommended_action": match["action"],
+        action_text = str(match.get("action", "")).strip()
+        if not action_text or action_text.lower() in ["nan", "none", "null"] or len(action_text) < 5:
+            action_text = "Non specific content"
+
+        if "non specific content" in action_text.lower():
+            return {
+                "recommended_action": "Non specific content",
+                "source": "None",
+                "evidence": "No relevant content found in the indexed manuals for this query.",
+                "confidence": "Low",
+                "relevance_score": round(float(max_score), 4),
+                "found": False,
+                "non_specific": True
+            }
+
+        res_general = {
+            "recommended_action": action_text,
             "source": match["source"],
             "evidence": self.docs[top_idx],
             "confidence": "High" if max_score > 0.4 else "Medium",
@@ -251,3 +361,4 @@ class RAGMaintenanceAdvisor:
             "is_custom": match.get("is_custom", False),
             "found": True
         }
+        return validate_rag_grounding(query_text, device_type, res_general)

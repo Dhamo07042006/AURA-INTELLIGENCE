@@ -39,33 +39,40 @@ def query_grok(messages: list, max_tokens: int = 1024) -> str | None:
         print("Groq API: XAI_API_KEY is not set. Falling back to local RAG formatter.")
         return None
 
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": 0.3,
-    }
+    candidate_models = [GROQ_MODEL, "llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+    
+    for model_name in candidate_models:
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": 0.3,
+        }
 
-    try:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            GROQ_API_URL,
-            data=data,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {GROQ_API_KEY}",
-                "User-Agent": "python-urllib/3.12",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-            return result["choices"][0]["message"]["content"]
+        try:
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                GROQ_API_URL,
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "User-Agent": "python-urllib/3.12",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                return result["choices"][0]["message"]["content"]
 
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        print(f"Groq API HTTP {e.code}: {body[:300]}")
-        return None
-    except Exception as exc:
-        print(f"Groq API error: {exc}")
-        return None
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            if "model_not_found" in body or e.code == 404:
+                continue
+            print(f"Groq API HTTP {e.code}: {body[:300]}")
+            return None
+        except Exception as exc:
+            print(f"Groq API error: {exc}")
+            return None
+
+    return None

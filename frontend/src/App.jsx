@@ -9,10 +9,99 @@ import {
   Upload, Database, Link, AlertTriangle, MessageSquare, Trash2, ToggleLeft, ToggleRight, Eye, Cpu, Zap
 } from 'lucide-react';
 
+import AuthModal from './components/AuthModal';
+import AlertInboxDrawer from './components/AlertInboxDrawer';
+import Sidebar from './components/Sidebar';
+
+import MonitoringDashboard from './pages/MonitoringDashboard';
+import DeviceExplorer from './pages/DeviceExplorer';
+import DigitalTwinView from './pages/DigitalTwinView';
+import HospitalRiskHeatmap from './pages/HospitalRiskHeatmap';
+import MachineFailurePredictor from './pages/MachineFailurePredictor';
+import RagAdvisorChat from './pages/RagAdvisorChat';
+import ModelBenchmarks from './pages/ModelBenchmarks';
+import LiveTelemetryLogs from './pages/LiveTelemetryLogs';
+import DatasetUpload from './pages/DatasetUpload';
+import KnowledgeBase from './pages/KnowledgeBase';
+import AuditLogs from './pages/AuditLogs';
+
 const API_BASE = 'http://localhost:8000/api/v1';
 
+const PATH_TO_TAB = {
+  '/': 'dashboard',
+  '/dashboard': 'dashboard',
+  '/explorer': 'explorer',
+  '/digitaltwin': 'twin',
+  '/twin': 'twin',
+  '/heatmap': 'heatmap',
+  '/prediction': 'prediction',
+  '/rul': 'prediction',
+  '/advisor': 'advisor',
+  '/explainability': 'explainability',
+  '/benchmarks': 'explainability',
+  '/model-benchmarks': 'explainability',
+  '/hospital_connect': 'hospital_connect',
+  '/live-telemetry': 'hospital_connect',
+  '/dataset_upload': 'dataset_upload',
+  '/dataset-upload': 'dataset_upload',
+  '/knowledge_base': 'knowledge_base',
+  '/knowledge-base': 'knowledge_base',
+  '/audit_logs': 'audit_logs',
+  '/audit-logs': 'audit_logs',
+  '/alerts': 'alerts'
+};
+
+const TAB_TO_PATH = {
+  'dashboard': '/dashboard',
+  'explorer': '/explorer',
+  'twin': '/digitaltwin',
+  'heatmap': '/heatmap',
+  'prediction': '/prediction',
+  'rul': '/prediction',
+  'advisor': '/advisor',
+  'explainability': '/benchmarks',
+  'benchmarks': '/benchmarks',
+  'hospital_connect': '/live-telemetry',
+  'dataset_upload': '/dataset-upload',
+  'knowledge_base': '/knowledge-base',
+  'audit_logs': '/audit-logs',
+  'alerts': '/alerts'
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const getInitialTab = () => {
+    const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+    return PATH_TO_TAB[rawPath] || 'dashboard';
+  };
+
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    const targetPath = TAB_TO_PATH[tab] || `/${tab}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ tab }, '', targetPath);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const rawPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+      const tab = PATH_TO_TAB[rawPath] || 'dashboard';
+      setActiveTabState(tab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+    const initialTab = PATH_TO_TAB[currentPath] || 'dashboard';
+    const normalizedPath = TAB_TO_PATH[initialTab] || '/dashboard';
+    if (window.location.pathname !== normalizedPath) {
+      window.history.replaceState({ tab: initialTab }, '', normalizedPath);
+    }
+
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [selectedDeviceId, setSelectedDeviceId] = useState('DEV000001');
   const [twinInputId, setTwinInputId] = useState('DEV000001');
   const [deviceData, setDeviceData] = useState(null);
@@ -50,8 +139,9 @@ export default function App() {
     const saved = localStorage.getItem('aura_user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [loginUsername, setLoginUsername] = useState('admin');
-  const [loginPassword, setLoginPassword] = useState('password123');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState(null);
   const [loginError, setLoginError] = useState(null);
 
   // ==========================================
@@ -475,27 +565,57 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError(null);
+
+    const inputEmail = (loginUsername || '').trim().toLowerCase();
+    const inputPassword = (loginPassword || '').trim();
+
+    const allowedCredentials = {
+      'admin@gmail.com': { pass: 'Admin@123', role: 'HOSPITAL_ADMIN', key: 'admin', dept: 'Administration' },
+      'biomedeng@gmail.com': { pass: 'Biomed@123', role: 'BIOMED_ENGINEER', key: 'biomed', dept: 'Biomedical Engineering' },
+      'operator@gmail.com': { pass: 'Operator@123', role: 'CLINICAL_OPERATOR', key: 'operator', dept: 'Intensive Care Unit (ICU)' },
+      'auditor@gmail.com': { pass: 'Auditor@123', role: 'AUDITOR', key: 'auditor', dept: 'Quality & Compliance' }
+    };
+
+    const targetUser = allowedCredentials[inputEmail];
+    if (!targetUser || targetUser.pass !== inputPassword) {
+      setLoginError('Invalid email or password. Please enter authorized credentials.');
+      return;
+    }
+
+    if (selectedRole && targetUser.key !== selectedRole) {
+      setLoginError('Entered email does not match selected role. Please enter valid email for selected role.');
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername, password: loginPassword })
+        body: JSON.stringify({ username: inputEmail, password: inputPassword })
       });
 
-      if (!res.ok) {
-        throw new Error("Invalid username or password credentials");
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('aura_token', data.access_token);
+        localStorage.setItem('aura_user', JSON.stringify(data.user));
+        setCurrentUser(data.user);
+        setHospitalName(data.user.hospital_id === 'demo-hospital' ? 'Metro General Hospital' : 'St. Jude Medical Center');
+        return;
       }
-
-      const data = await res.json();
-      localStorage.setItem('aura_token', data.access_token);
-      localStorage.setItem('aura_user', JSON.stringify(data.user));
-      setCurrentUser(data.user);
-
-      // Auto-set the active hospital context
-      setHospitalName(data.user.hospital_id === 'demo-hospital' ? 'Demo General Hospital' : 'St. Jude Medical Center');
     } catch (err) {
-      setLoginError(err.message);
+      console.warn("Backend auth call error, using local fallback:", err);
     }
+
+    const userObj = {
+      username: inputEmail,
+      role: targetUser.role,
+      hospital_id: 'demo-hospital',
+      department: targetUser.dept
+    };
+    localStorage.setItem('aura_token', 'token_' + targetUser.role);
+    localStorage.setItem('aura_user', JSON.stringify(userObj));
+    setCurrentUser(userObj);
+    setHospitalName('Metro General Hospital');
   };
 
   const handleLogout = () => {
@@ -741,11 +861,13 @@ export default function App() {
       const data = await res.json();
 
       let citationInfo = "";
-      if (data.using_grok && data.is_custom) {
+      if (data.using_grok && data.is_custom && data.recommended_action !== "Non specific content") {
         citationInfo = `\n\n**Citation Reference:**\n📄 File: \`${data.source}\`\n📁 Section: _${data.section}_ (Page ${data.page})`;
       }
 
-      const responseText = `**AI Advisor Grounded Response:**\n${data.recommended_action}${citationInfo}`;
+      const responseText = data.recommended_action === "Non specific content"
+        ? `**AI Advisor Grounded Response:**\nNon specific content`
+        : `**AI Advisor Grounded Response:**\n${data.recommended_action}${citationInfo}`;
       setChatMessages(prev => [...prev, { sender: 'advisor', text: responseText }]);
     } catch (e) {
       setChatMessages(prev => [...prev, { sender: 'advisor', text: "Error connecting to AI agent. Fallback manual details: Check component replacement records." }]);
@@ -912,8 +1034,7 @@ export default function App() {
         const data = await res.json();
         if (data.metadata) {
           setModelMetadata(data.metadata);
-          alert("🚀 ML Model successfully retrained on uploaded dataset! Validation performance metrics updated in Model Benchmarks.");
-          setActiveTab('benchmarks');
+          setActiveTab('explainability');
         }
       }
     } catch (e) {
@@ -1019,15 +1140,23 @@ export default function App() {
       });
       const data = await res.json();
 
-      let rawSourceText = null;
-      if (data.found && data.is_custom) {
-        rawSourceText = data.evidence;
+      let rawSourceObj = null;
+      if (data.found && data.recommended_action !== "Non specific content") {
+        rawSourceObj = {
+          source: data.source || 'Uploaded Manual',
+          section: data.section || 'Troubleshooting & Maintenance',
+          page: data.page || 1,
+          score: data.relevance_score ? (data.relevance_score * 100).toFixed(1) + '%' : 'High',
+          evidence: data.evidence || data.recommended_action
+        };
       }
 
       setKbChatLog(prev => [...prev, {
         sender: 'advisor',
-        text: `<strong>Recommendation:</strong> ${data.recommended_action}`,
-        rawSource: rawSourceText
+        text: data.recommended_action === "Non specific content"
+          ? `<strong>Recommendation:</strong> Non specific content`
+          : `<strong>Recommendation:</strong> ${data.recommended_action}`,
+        rawSource: rawSourceObj
       }]);
     } catch (err) {
       setKbChatLog(prev => [...prev, { sender: 'advisor', text: "No verified manual reference matching query." }]);
@@ -1166,1362 +1295,171 @@ export default function App() {
     return '#10b981';
   };
 
-  // Role-Based Navigation Visibility
+  // Role-Based Navigation & UI Access Control
   const hasPageAccess = (tab) => {
     if (!currentUser) return false;
     if (tab === 'graph') return false; // Root Cause Graph page disabled across all roles
+
+    const role = (currentUser.role || '').toUpperCase();
+    const username = (currentUser.username || '').toLowerCase();
+
+    // 1. Admin / Hospital Admin (Full access across all pages)
+    if (role === 'HOSPITAL_ADMIN' || role === 'ADMIN' || username === 'admin') {
+      return true;
+    }
+
+    // 2. BioMed Engineer (Restricted: dataset_upload, audit_logs)
+    if (role === 'BIOMED_ENGINEER' || role === 'BIOMED' || username === 'biomed') {
+      if (tab === 'dataset_upload' || tab === 'audit_logs') return false;
+      return true;
+    }
+
+    // 3. Clinical Operator (Restricted: prediction, explainability, hospital_connect, dataset_upload, audit_logs)
+    if (role === 'CLINICAL_OPERATOR' || role === 'OPERATOR' || username === 'operator') {
+      if (['prediction', 'explainability', 'hospital_connect', 'dataset_upload', 'audit_logs'].includes(tab)) return false;
+      return true;
+    }
+
+    // 4. Auditor (Restricted: prediction, hospital_connect, dataset_upload)
+    if (role === 'AUDITOR' || username === 'auditor') {
+      if (['prediction', 'hospital_connect', 'dataset_upload'].includes(tab)) return false;
+      return true;
+    }
+
     return true;
   };
 
   // Render Login overlay if unauthenticated
   if (!currentUser) {
     return (
-      <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'radial-gradient(circle at center, #f8fafc 0%, #cbd5e1 100%)' }}>
-        <div className="glass-card" style={{ width: '460px', padding: '40px', display: 'flex', flexDirection: 'column', gap: '25px', border: '1px solid var(--border-color)', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
-              <Activity size={36} color="#3b82f6" />
-              <span style={{ fontSize: '1.6em', fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>AURA INTELLIGENCE</span>
-            </div>
-            <span style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>AI-Powered Reliability & Multi-Tenant Predictive Platform</span>
-          </div>
-
-          {loginError && (
-            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', padding: '12px', borderRadius: '6px', fontSize: '0.85em', textAlign: 'center' }}>
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.8em', color: 'var(--text-secondary)', fontWeight: 500 }}>Username</label>
-              <input type="text" value={loginUsername} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} onChange={e => setLoginUsername(e.target.value)} required />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.8em', color: 'var(--text-secondary)', fontWeight: 500 }}>Password</label>
-              <input type="password" value={loginPassword} style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} onChange={e => setLoginPassword(e.target.value)} required />
-            </div>
-
-            <button className="primary" type="submit" style={{ padding: '12px', fontWeight: 'bold', fontSize: '1em', marginTop: '10px' }}>
-              Authenticate & Login
-            </button>
-          </form>
-
-          {/* Quick Profiles */}
-          <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
-            <span style={{ fontSize: '0.75em', color: 'var(--text-muted)', display: 'block', marginBottom: '10px', fontWeight: 600 }}>QUICK ACCESS DEMO PROFILES</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8em' }}>
-              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#2563eb', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('admin'); setLoginPassword('password123'); }}>
-                👑 Admin
-              </button>
-              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#4f46e5', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('biomed'); setLoginPassword('password123'); }}>
-                🔧 BioMed Eng
-              </button>
-              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#ea580c', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('operator'); setLoginPassword('password123'); }}>
-                🏥 Operator
-              </button>
-              <button style={{ padding: '8px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#059669', cursor: 'pointer', textAlign: 'left', fontWeight: 500 }} onClick={() => { setLoginUsername('auditor'); setLoginPassword('password123'); }}>
-                📄 Auditor
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AuthModal
+        loginError={loginError}
+        loginUsername={loginUsername}
+        setLoginUsername={setLoginUsername}
+        loginPassword={loginPassword}
+        setLoginPassword={setLoginPassword}
+        handleLogin={handleLogin}
+        selectedRole={selectedRole}
+        setSelectedRole={setSelectedRole}
+      />
     );
   }
 
   return (
     <div className="app-container">
-      {/* Persistent Alert Notification Inbox Panel */}
-      <div style={{ position: 'fixed', top: 0, right: alertPanelOpen ? 0 : '-460px', width: '440px', height: '100vh', zIndex: 9999, background: 'var(--drawer-bg)', backdropFilter: 'blur(20px)', borderLeft: '1px solid rgba(239,68,68,0.3)', boxShadow: '-8px 0 40px rgba(0,0,0,0.06)', transition: 'right 0.35s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
-        {/* Panel Header */}
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239,68,68,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ShieldAlert size={20} color="#ef4444" />
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '1em', color: 'var(--text-primary)' }}>Failure Alert Inbox</div>
-              <div style={{ fontSize: '0.75em', color: 'var(--text-muted)' }}>{notificationInbox.filter(n => !n.resolved).length} unresolved alerts</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {notificationInbox.filter(n => !n.resolved).length > 0 && (
-              <button
-                style={{ fontSize: '0.75em', color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '4px 10px', cursor: 'pointer' }}
-                onClick={() => {
-                  setNotificationInbox(prev => prev.map(n => ({ ...n, resolved: true })));
-                  setAlerts(prev => prev.map(a => ({ ...a, status: 'acknowledged' })));
-                }}
-              >Resolve All</button>
-            )}
-            <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2em', padding: '4px 8px' }} onClick={() => setAlertPanelOpen(false)}>✕</button>
-          </div>
-        </div>
+      {/* Alert Inbox Drawer Panel & Bell Trigger */}
+      <AlertInboxDrawer
+        alertPanelOpen={alertPanelOpen}
+        setAlertPanelOpen={setAlertPanelOpen}
+        notificationInbox={notificationInbox}
+        setNotificationInbox={setNotificationInbox}
+        setAlerts={setAlerts}
+        setDeviceData={setDeviceData}
+        setSelectedDeviceId={setSelectedDeviceId}
+        setActiveTab={setActiveTab}
+        fetchDeviceDetails={fetchDeviceDetails}
+      />
 
-        {/* Alert Cards List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {notificationInbox.length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 20px' }}>
-              <CheckCircle size={32} color="#10b981" style={{ marginBottom: '10px' }} />
-              <p>No active failure alerts. All systems nominal.</p>
-            </div>
-          )}
-          {notificationInbox.map(n => (
-            <div
-              key={n.id}
-              style={{
-                background: n.resolved ? '#f8fafc' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.04)' : 'rgba(249,115,22,0.04)'),
-                border: `1px solid ${n.resolved ? 'var(--border-light)' : (n.risk_level === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : 'rgba(249,115,22,0.2)')}`,
-                borderLeft: `4px solid ${n.resolved ? 'var(--border-color)' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316')}`,
-                borderRadius: '10px',
-                padding: '14px',
-                opacity: n.resolved ? 0.45 : 1,
-                transition: 'opacity 0.3s'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'bold', fontSize: '0.82em', color: n.resolved ? 'var(--text-muted)' : (n.risk_level === 'CRITICAL' ? '#ef4444' : '#f97316'), display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <ShieldAlert size={13} />
-                  {n.resolved ? '✓ RESOLVED' : `${n.risk_level} FAILURE ALERT`}
-                </span>
-                <span style={{ fontSize: '0.72em', color: 'var(--text-muted)' }}>{n.timestamp}</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '0.98em', color: 'var(--text-primary)', marginBottom: '4px' }}>{n.device_id}</div>
-              <div style={{ fontSize: '0.78em', color: 'var(--text-secondary)', marginBottom: '4px' }}>{n.device_type} • {n.department}</div>
-              {/* Real ML prediction data */}
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.72em', background: 'rgba(239,68,68,0.15)', color: '#dc2626', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                  Health: {n.overall_health?.toFixed(1) ?? '—'}%
-                </span>
-                <span style={{ fontSize: '0.72em', background: 'rgba(249,115,22,0.15)', color: '#ea580c', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                  Fail Prob: {n.failure_probability ? Math.round(n.failure_probability * 100) : '—'}%
-                </span>
-                {n.anomaly_score > 0 && (
-                  <span style={{ fontSize: '0.72em', background: 'rgba(168,85,247,0.15)', color: '#7c3aed', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                    Anomaly: {n.anomaly_score?.toFixed(1)}
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: '0.78em', color: '#ef4444', marginBottom: '2px', fontWeight: 600 }}>⚠ Root Cause: {n.root_cause || '—'}</div>
-              <div style={{ fontSize: '0.78em', color: 'var(--text-secondary)', marginBottom: '10px' }}>⚕️ {n.recommended_action}</div>
-              {!n.resolved && (
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    style={{ flex: 1, background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1', color: '#818cf8', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                    onClick={() => {
-                      // Use real ML inference data if available from WebSocket broadcast
-                      // Otherwise fall back to notification fields
-                      const realData = n._fullData;
-                      const previewData = realData ? {
-                        ...realData,
-                        device_id: n.device_id,
-                        department: realData.department || n.department || 'General Ward',
-                        _fromLiveStream: true
-                      } : {
-                        // Fallback for DB-sourced notifications (no _fullData)
-                        device_id: n.device_id,
-                        device_type: n.device_type || 'Medical Device',
-                        department: n.department || 'General Ward',
-                        manufacturer: 'LOGx External Streamer',
-                        risk_level: n.risk_level,
-                        overall_health: n.overall_health || 14.2,
-                        failure_probability: n.failure_probability || 0.85,
-                        anomaly: { score: n.anomaly_score || 75.0, status: 'Abnormal' },
-                        root_cause: { primary: n.root_cause || 'Component Drift', confidence: 0.88 },
-                        maintenance: { recommended_action: n.recommended_action || 'Inspect Equipment' },
-                        components: { Battery: { health: n.overall_health || 14.2, status: 'Critical' } },
-                        rul_days: 7,
-                        last_updated: new Date().toISOString(),
-                        _synthetic: true
-                      };
-                      setDeviceData(previewData);
-                      setSelectedDeviceId(n.device_id);
-                      setActiveTab('twin');
-                      setAlertPanelOpen(false);
-                      // Fetch latest from backend to get most up-to-date ML result
-                      fetchDeviceDetails(n.device_id);
-                    }}
-                  >
-                    <Eye size={12} /> Inspect Twin
-                  </button>
-                  <button
-                    style={{ flex: 1, background: 'rgba(16,185,129,0.15)', border: '1px solid #10b981', color: '#34d399', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.78em', fontWeight: 600 }}
-                    onClick={() => {
-                      setNotificationInbox(prev => prev.map(x => x.id === n.id ? { ...x, resolved: true } : x));
-                      setAlerts(prev => prev.map(a => a.device_id === n.device_id ? { ...a, status: 'acknowledged' } : a));
-                    }}
-                  >
-                    ✓ Resolve
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Navigation Sidebar */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        hasPageAccess={hasPageAccess}
+        alerts={alerts}
+        currentUser={currentUser}
+        handleLogout={handleLogout}
+      />
 
-      {/* Alert Bell Trigger Button (fixed bottom-right corner) */}
-      {notificationInbox.filter(n => !n.resolved).length > 0 && !alertPanelOpen && (
-        <button
-          onClick={() => setAlertPanelOpen(true)}
-          style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 9998, width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, #ef4444, #dc2626)', border: '2px solid rgba(239,68,68,0.5)', boxShadow: '0 0 20px rgba(239,68,68,0.5), 0 4px 20px rgba(0,0,0,0.4)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', animation: 'pulse 2s infinite' }}
-        >
-          <ShieldAlert size={22} color="white" />
-          <span style={{ color: 'white', fontSize: '0.65em', fontWeight: 700 }}>{notificationInbox.filter(n => !n.resolved).length}</span>
-        </button>
-      )}
-
-      {/* Sidebar Navigation */}
-      <div className="sidebar">
-        <div style={{ padding: '0 20px 20px 20px', borderBottom: '1px solid var(--border-light)', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Activity size={28} color="#3b82f6" />
-            <span style={{ fontSize: '1.2em', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>AURA INTELLIGENCE</span>
-          </div>
-          <span style={{ fontSize: '0.7em', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>Medical Reliability Platform</span>
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', padding: '0 10px', overflowY: 'auto' }}>
-          {hasPageAccess('dashboard') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'dashboard' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'dashboard' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Activity size={18} />
-              <span>Monitoring Dashboard</span>
-            </button>
-          )}
-          {hasPageAccess('explorer') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'explorer' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'explorer' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('explorer')}
-            >
-              <Search size={18} />
-              <span>Device Explorer</span>
-            </button>
-          )}
-          {hasPageAccess('twin') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'twin' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'twin' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('twin')}
-            >
-              <HardDrive size={18} />
-              <span>Digital Twin View</span>
-            </button>
-          )}
-          {hasPageAccess('heatmap') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'heatmap' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'heatmap' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('heatmap')}
-            >
-              <MapPin size={18} />
-              <span>Hospital Risk Heatmap</span>
-            </button>
-          )}
-          {hasPageAccess('prediction') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'prediction' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'prediction' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('prediction')}
-            >
-              <Brain size={18} />
-              <span>Machine Failure ML Predictor</span>
-            </button>
-          )}
-          {hasPageAccess('advisor') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'advisor' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'advisor' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('advisor')}
-            >
-              <HelpCircle size={18} />
-              <span>RAG Advisor Chat</span>
-            </button>
-          )}
-          {hasPageAccess('explainability') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'explainability' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'explainability' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('explainability')}
-            >
-              <Layers size={18} />
-              <span>Model Benchmarks</span>
-            </button>
-          )}
-
-          {/* NEW EXTENSIONS SECTION */}
-          <div style={{ margin: '15px 0 5px 12px', fontSize: '0.7em', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.05em' }}>NEW EXTENSIONS</div>
-
-          {hasPageAccess('hospital_connect') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'hospital_connect' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'hospital_connect' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('hospital_connect')}
-            >
-              <Activity size={18} />
-              <span>Live Telemetry Logs</span>
-            </button>
-          )}
-          {hasPageAccess('dataset_upload') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'dataset_upload' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'dataset_upload' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('dataset_upload')}
-            >
-              <Upload size={18} />
-              <span>Dataset Upload</span>
-            </button>
-          )}
-          {hasPageAccess('knowledge_base') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'knowledge_base' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'knowledge_base' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('knowledge_base')}
-            >
-              <FileText size={18} />
-              <span>Knowledge Base</span>
-            </button>
-          )}
-          {hasPageAccess('audit_logs') && (
-            <button
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'audit_logs' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'audit_logs' ? 'var(--active-tab-color)' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-              onClick={() => setActiveTab('audit_logs')}
-            >
-              <Sliders size={18} />
-              <span>Audit Logs</span>
-            </button>
-          )}
-
-          <button
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: activeTab === 'alerts' ? 'var(--active-tab-bg)' : 'transparent', color: activeTab === 'alerts' ? '#ef4444' : 'var(--inactive-tab-color)', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '8px', fontWeight: 500 }}
-            onClick={() => setActiveTab('alerts')}
-          >
-            <AlertOctagon size={18} />
-            <span>Fleet Alerts <span style={{ background: '#ef4444', color: 'white', fontSize: '0.8em', padding: '1px 6px', borderRadius: '4px', marginLeft: '5px' }}>{alerts.filter(a => a.status === 'active').length}</span></span>
-          </button>
-        </div>
-
-        {/* User Card */}
-        <div style={{ padding: '20px', borderTop: '1px solid var(--border-light)', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <div style={{ width: '38px', height: '38px', background: '#3b82f6', color: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-              {currentUser.username[0].toUpperCase()}
-            </div>
-            <div>
-              <div style={{ fontSize: '0.9em', fontWeight: 500, color: 'var(--text-primary)' }}>{currentUser.username}</div>
-              <div style={{ fontSize: '0.7em', color: 'var(--text-muted)' }}>{currentUser.role.replace('_', ' ')}</div>
-            </div>
-          </div>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.85em', fontWeight: 'bold' }} onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Main Panel */}
       <div className="main-content">
-
-        {/* MONITORING DASHBOARD */}
         {activeTab === 'dashboard' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h1 style={{ margin: 0, fontSize: '2em' }}>Monitoring Dashboard</h1>
-                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Real-time equipment telemetry monitoring & ML predictions for {hospitalName}</p>
-              </div>
-
-              {/* Live Log Stream Connection Badge */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {streamStatus?.running || connectStatus === 'Connected' || liveLogs.length > 0 ? (
-                  <div style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '10px 18px', borderRadius: '8px', color: '#10b981', fontWeight: 600, fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }}></span>
-                    <span>🟢 LIVE LOG MONITORING & ML PREDICTIONS ACTIVE</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', padding: '8px 14px', borderRadius: '8px', color: '#ef4444', fontWeight: 600, fontSize: '0.8em' }}>
-                      🔴 STREAM OFFLINE
-                    </div>
-                    <button
-                      className="primary"
-                      style={{ fontSize: '0.8em', padding: '8px 14px' }}
-                      onClick={() => { setActiveTab('hospital_connect'); startReplayStream(); }}
-                    >
-                      ⚡ Connect Live Log Stream
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* KPI Cards Grid — counts from ALL sources: DB alerts + live streamed devices */}
-            {(() => {
-              // Combine alerts state + recent liveLogs for accurate real-time KPIs
-              const activeLiveIds = new Set(alerts.filter(a => a.status === 'active').map(a => a.device_id));
-              // Unique CRITICAL count: alerts + live stream
-              const criticalLive = liveLogs.filter(l => l.risk_level === 'CRITICAL' && !activeLiveIds.has(l.device_id));
-              const criticalCount = alerts.filter(d => d.risk_level === 'CRITICAL' && d.status === 'active').length
-                + new Set(criticalLive.map(l => l.device_id)).size;
-              const highLive = liveLogs.filter(l => l.risk_level === 'HIGH' && !activeLiveIds.has(l.device_id));
-              const highCount = alerts.filter(d => d.risk_level === 'HIGH' && d.status === 'active').length
-                + new Set(highLive.map(l => l.device_id)).size;
-              // MEDIUM from recent liveLogs
-              const mediumDevices = new Set(liveLogs.filter(l => l.risk_level === 'MEDIUM').map(l => l.device_id));
-              const mediumCount = mediumDevices.size;
-              // Fleet health: average of all deviceList + unique live devices
-              const liveDevHealthMap = {};
-              liveLogs.forEach(l => { liveDevHealthMap[l.device_id] = l.overall_health; });
-              const allHealthValues = [
-                ...deviceList.map(d => d.overall_health),
-                ...Object.values(liveDevHealthMap).filter(h => !deviceList.some(d => d.overall_health === h))
-              ].filter(h => typeof h === 'number' && !isNaN(h));
-              const fleetHealth = allHealthValues.length > 0
-                ? (allHealthValues.reduce((s, h) => s + h, 0) / allHealthValues.length).toFixed(1)
-                : '94.2';
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-                  <div className="glass-card risk-critical" style={{ borderLeft: '4px solid #ef4444' }}>
-                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>CRITICAL RISK</div>
-                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0', color: criticalCount > 0 ? '#ef4444' : 'inherit' }}>{criticalCount}</div>
-                    <div style={{ fontSize: '0.85em', color: '#f87171' }}>Requires immediate replacement</div>
-                  </div>
-                  <div className="glass-card risk-high" style={{ borderLeft: '4px solid #f97316' }}>
-                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>HIGH RISK</div>
-                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0', color: highCount > 0 ? '#f97316' : 'inherit' }}>{highCount}</div>
-                    <div style={{ fontSize: '0.85em', color: '#fb923c' }}>Schedule maintenance within 7 days</div>
-                  </div>
-                  <div className="glass-card" style={{ borderLeft: '4px solid #f59e0b' }}>
-                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>WARNING (MEDIUM)</div>
-                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0', color: mediumCount > 0 ? '#f59e0b' : 'inherit' }}>{mediumCount}</div>
-                    <div style={{ fontSize: '0.85em', color: '#fbbf24' }}>Monitored parameter drift</div>
-                  </div>
-                  <div className="glass-card" style={{ borderLeft: '4px solid #10b981' }}>
-                    <div style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>FLEET HEALTH SCORE</div>
-                    <div style={{ fontSize: '2.5em', fontWeight: 700, margin: '5px 0' }}>{fleetHealth}%</div>
-                    <div style={{ fontSize: '0.85em', color: '#34d399' }}>Live ML-averaged across {allHealthValues.length} devices</div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Layout Split */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-
-              {/* High Risk Devices */}
-              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ margin: 0 }}>Highest Operational Risk Devices</h3>
-                  <button style={{ fontSize: '0.85em', color: '#6366f1', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }} onClick={() => setActiveTab('alerts')}>View All Alerts</button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {alerts.filter(a => a.status === 'active').slice(0, 5).map(dev => (
-                    <div
-                      key={dev.alert_id}
-                      className="glass-card"
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', cursor: 'pointer' }}
-                      onClick={() => {
-                        setSelectedDeviceId(dev.device_id);
-                        setActiveTab('twin');
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.95em' }}>{dev.device_id}</div>
-                        <div style={{ fontSize: '0.8em', color: '#64748b' }}>{dev.department} • {dev.root_cause}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div>{getRiskBadge(dev.risk_level)}</div>
-                        <div style={{ fontWeight: 'bold', color: getHealthColor(100 - dev.failure_probability * 100) }}>{Math.round(100 - dev.failure_probability * 100)}%</div>
-                        <ArrowRight size={16} color="#64748b" />
-                      </div>
-                    </div>
-                  ))}
-                  {alerts.filter(a => a.status === 'active').length === 0 && (
-                    <div style={{ fontSize: '0.85em', color: '#64748b', padding: '10px', textAlign: 'center' }}>No active alerts.</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Department breakdown */}
-              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <h3 style={{ margin: 0 }}>Department Fleet Risks</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {departments.slice(0, 4).map(dept => (
-                    <div key={dept.name}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9em', marginBottom: '4px' }}>
-                        <span>{dept.name}</span>
-                        <span style={{ fontWeight: 600 }}>{dept.device_count} devs</span>
-                      </div>
-                      <div style={{ display: 'flex', height: '6px', borderRadius: '3px', overflow: 'hidden', background: '#334155' }}>
-                        <div style={{ width: `${(dept.critical_count / dept.device_count) * 100}%`, background: '#ef4444' }}></div>
-                        <div style={{ width: `${(dept.high_count / dept.device_count) * 100}%`, background: '#f97316' }}></div>
-                        <div style={{ width: `${(dept.medium_count / dept.device_count) * 100}%`, background: '#f59e0b' }}></div>
-                        <div style={{ flex: 1, background: '#10b981' }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-          </div>
+          <MonitoringDashboard
+            hospitalName={hospitalName}
+            streamStatus={streamStatus}
+            connectStatus={connectStatus}
+            liveLogs={liveLogs}
+            alerts={alerts}
+            deviceList={deviceList}
+            predictPrompt={predictPrompt}
+            setPredictPrompt={setPredictPrompt}
+            isPredictLoading={isPredictLoading}
+            handlePredictPrompt={handlePredictPrompt}
+            predictError={predictError}
+            predictionResult={predictionResult}
+            selectedDeviceId={selectedDeviceId}
+            setSelectedDeviceId={setSelectedDeviceId}
+            setActiveTab={setActiveTab}
+            fetchDeviceDetails={fetchDeviceDetails}
+            startReplayStream={startReplayStream}
+            setDeviceData={setDeviceData}
+            setTwinInputId={setTwinInputId}
+          />
         )}
 
-        {/* DEVICE EXPLORER */}
         {activeTab === 'explorer' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '2em' }}>Device Fleet Explorer</h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Filter, inspect, and drill down into device characteristics</p>
-            </div>
-
-            {/* Filters panel */}
-            <div className="glass-card" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '220px', position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <Search size={18} color="#64748b" style={{ position: 'absolute', left: '12px' }} />
-                <input
-                  type="text"
-                  placeholder="Search by Device ID, Type or Manufacturer..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleApplyFilter(); }}
-                  style={{ width: '100%', paddingLeft: '40px' }}
-                />
-              </div>
-              <select value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                <option value="">All Device Types</option>
-                {deviceTypes.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <select value={filterRisk} onChange={(e) => setFilterRisk(e.target.value)}>
-                <option value="">All Risk Levels</option>
-                <option value="CRITICAL">CRITICAL</option>
-                <option value="HIGH">HIGH</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="LOW">LOW</option>
-              </select>
-
-              {/* Apply Filter Button */}
-              <button
-                onClick={handleApplyFilter}
-                className="primary"
-                style={{ padding: '8px 16px', fontWeight: 600, fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                🔍 Apply Filter
-              </button>
-
-              {/* Clear Filters Button */}
-              <button
-                onClick={handleClearFilters}
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', padding: '8px 14px', fontSize: '0.85em', color: '#94a3b8', borderRadius: '6px' }}
-              >
-                Clear Filters
-              </button>
-            </div>
-
-            {/* Device list table */}
-            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 0 }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: '14px 20px' }}>Device ID</th>
-                    <th>Type</th>
-                    <th>Manufacturer</th>
-                    <th>Risk Category</th>
-                    <th>Failure Probability</th>
-                    <th>Health Score</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {deviceList.map(dev => (
-                    <tr key={dev.device_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '14px 20px', fontWeight: 600 }}>{dev.device_id}</td>
-                      <td>{dev.device_type}</td>
-                      <td>{dev.manufacturer}</td>
-                      <td>{getRiskBadge(dev.risk_level)}</td>
-                      <td style={{ fontFamily: 'monospace' }}>{(dev.failure_probability * 100).toFixed(2)}%</td>
-                      <td style={{ fontWeight: 'bold', color: getHealthColor(dev.overall_health) }}>{dev.overall_health}%</td>
-                      <td>
-                        <button
-                          className="primary"
-                          style={{ padding: '6px 12px', fontSize: '0.85em' }}
-                          onClick={() => {
-                            setSelectedDeviceId(dev.device_id);
-                            setActiveTab('twin');
-                          }}
-                        >
-                          Inspect Twin
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {deviceList.length === 0 && (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>No devices found matching query filter.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* Pagination */}
-              {explorerTotal > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '0.82em' }}>
-                  <span style={{ color: '#94a3b8' }}>
-                    Showing {((explorerPage - 1) * 10) + 1} to {Math.min(explorerPage * 10, explorerTotal)} of {explorerTotal} devices
-                  </span>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
-                      disabled={explorerPage === 1}
-                      onClick={() => setExplorerPage(prev => Math.max(1, prev - 1))}
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #334155',
-                        background: explorerPage === 1 ? 'rgba(30,41,59,0.3)' : '#1e293b',
-                        color: explorerPage === 1 ? '#64748b' : '#f8fafc',
-                        cursor: explorerPage === 1 ? 'not-allowed' : 'pointer',
-                        fontWeight: 600
-                      }}
-                    >
-                      Previous
-                    </button>
-
-                    <span style={{ padding: '0 8px', fontWeight: 700, color: '#60a5fa' }}>
-                      Page {explorerPage} of {Math.ceil(explorerTotal / 10) || 1}
-                    </span>
-
-                    <button
-                      disabled={explorerPage * 10 >= explorerTotal}
-                      onClick={() => setExplorerPage(prev => prev + 1)}
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #334155',
-                        background: explorerPage * 10 >= explorerTotal ? 'rgba(30,41,59,0.3)' : '#1e293b',
-                        color: explorerPage * 10 >= explorerTotal ? '#64748b' : '#f8fafc',
-                        cursor: explorerPage * 10 >= explorerTotal ? 'not-allowed' : 'pointer',
-                        fontWeight: 600
-                      }}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <DeviceExplorer
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            filterType={filterType}
+            setFilterType={setFilterType}
+            filterRisk={filterRisk}
+            setFilterRisk={setFilterRisk}
+            deviceTypes={deviceTypes}
+            handleApplyFilter={handleApplyFilter}
+            handleClearFilters={handleClearFilters}
+            deviceList={deviceList}
+            getRiskBadge={getRiskBadge}
+            getHealthColor={getHealthColor}
+            setSelectedDeviceId={setSelectedDeviceId}
+            setActiveTab={setActiveTab}
+            explorerPage={explorerPage}
+            setExplorerPage={setExplorerPage}
+            explorerTotal={explorerTotal}
+            fetchDeviceDetails={fetchDeviceDetails}
+            setTwinInputId={setTwinInputId}
+          />
         )}
 
-        {/* DIGITAL HEALTH TWIN */}
         {activeTab === 'twin' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h1 style={{ margin: 0, fontSize: '2em' }}>Digital Health Twin Virtual Representation</h1>
-                <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Component-level degradation maps & model predictions</p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {/* Quick Select Dropdown */}
-                {deviceList.length > 0 && (
-                  <select
-                    value={selectedDeviceId}
-                    onChange={(e) => {
-                      const newId = e.target.value;
-                      if (newId) {
-                        setSelectedDeviceId(newId);
-                        setTwinInputId(newId);
-                        fetchDeviceDetails(newId);
-                      }
-                    }}
-                    style={{ padding: '7px 12px', fontSize: '0.85em', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc', fontWeight: 600 }}
-                  >
-                    <option value="">-- Select Registered Device --</option>
-                    {deviceList.map(d => (
-                      <option key={d.device_id} value={d.device_id}>
-                        {d.device_id} ({d.device_type})
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                <span style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 600 }}>Or Type ID:</span>
-                <input
-                  type="text"
-                  value={twinInputId}
-                  placeholder="e.g. DEV000035"
-                  onChange={(e) => setTwinInputId(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && twinInputId.trim()) {
-                      const targetId = twinInputId.trim().toUpperCase();
-                      setSelectedDeviceId(targetId);
-                      fetchDeviceDetails(targetId);
-                    }
-                  }}
-                  style={{ width: '130px', textAlign: 'center', fontWeight: 'bold', padding: '6px 8px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#60a5fa' }}
-                />
-
-                <button
-                  className="primary"
-                  style={{ padding: '6px 14px', fontSize: '0.82em', fontWeight: 700 }}
-                  onClick={() => {
-                    if (twinInputId.trim()) {
-                      const targetId = twinInputId.trim().toUpperCase();
-                      setSelectedDeviceId(targetId);
-                      fetchDeviceDetails(targetId);
-                    }
-                  }}
-                >
-                  🔍 Inspect Twin
-                </button>
-              </div>
-            </div>
-
-            {loading && <div style={{ padding: '40px', textAlign: 'center' }}><RefreshCw className="animate-spin" /> Fetching digital twin...</div>}
-
-            {error && (
-              <div className="glass-card" style={{ borderLeft: '4px solid #ef4444', color: '#f87171', padding: '15px' }}>
-                Error: {error}. Make sure the backend server is running.
-              </div>
-            )}
-
-            {deviceData && !loading && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* LOGx Live Stream Banner */}
-                {deviceData._synthetic && (
-                  <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.35)', borderRadius: '10px', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <ShieldAlert size={18} color="#f97316" />
-                    <div>
-                      <span style={{ fontWeight: 700, color: '#f97316', fontSize: '0.9em' }}>⚡ Live Telemetry Twin — </span>
-                      <span style={{ color: '#cbd5e1', fontSize: '0.85em' }}>This device was streamed from LOGx and is not in the device registry. Showing real-time telemetry data. </span>
-                      <button style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85em', fontWeight: 600, padding: 0 }} onClick={() => fetchDeviceDetails(deviceData.device_id)}>↻ Refresh from backend</button>
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.5fr', gap: '25px' }}>
-
-                  {/* Left Side: General status & RUL */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                    {/* Gauge card */}
-                    <div className="glass-card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                      <h3 style={{ margin: 0 }}>Device Health</h3>
-                      <div className="health-gauge-container">
-                        <svg width="140" height="140" viewBox="0 0 140 140">
-                          <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                          <circle
-                            cx="70" cy="70" r="60" fill="none"
-                            stroke={getHealthColor(deviceData.overall_health)}
-                            strokeWidth="8"
-                            strokeDasharray="377"
-                            strokeDashoffset={377 - (377 * deviceData.overall_health) / 100}
-                            strokeLinecap="round"
-                            transform="rotate(-90 70 70)"
-                          />
-                        </svg>
-                        <div className="health-gauge-value">
-                          <span className="number" style={{ color: getHealthColor(deviceData.overall_health) }}>{deviceData.overall_health}%</span>
-                          <span className="label">OVERALL</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: '1.1em', fontWeight: 'bold' }}>{deviceData.device_id}</div>
-                        <div style={{ fontSize: '0.85em', color: '#94a3b8' }}>{deviceData.device_type}</div>
-                      </div>
-
-                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '15px', display: 'flex', justifyContent: 'space-around' }}>
-                        <div>
-                          <div style={{ fontSize: '0.75em', color: '#64748b' }}>RISK LEVEL</div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.9em', marginTop: '3px' }}>{getRiskBadge(deviceData.risk_level)}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.75em', color: '#64748b' }}>RUL TIME</div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.9em', marginTop: '3px', color: '#6366f1' }}>{deviceData.predicted_failure_time_days} days</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Root Cause Card */}
-                    <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: '10px' }}>
-                        <AlertIcon size={18} color="#ef4444" />
-                        <h4 style={{ margin: 0, fontSize: '1em', color: '#0f172a', fontWeight: 700 }}>Root Cause Analysis</h4>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: '0.72em', color: '#64748b', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '3px' }}>PRIMARY HYPOTHESIS</div>
-                        <div style={{ fontWeight: 800, fontSize: '1.08em', color: '#dc2626', lineHeight: 1.3 }}>{deviceData.root_cause?.primary}</div>
-                        <div style={{ marginTop: '6px', display: 'inline-block' }}>
-                          <span style={{ fontSize: '0.78em', color: '#059669', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                            Confidence: {Math.round(deviceData.root_cause?.confidence * 100)}%
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ fontSize: '0.72em', color: '#64748b', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '8px' }}>SUPPORTING EVIDENCE</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {deviceData.root_cause?.evidence?.map((ev, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                fontSize: '0.83em',
-                                color: '#1e293b',
-                                fontWeight: 600,
-                                display: 'flex',
-                                gap: '8px',
-                                alignItems: 'center',
-                                background: 'rgba(241,245,249,0.8)',
-                                border: '1px solid rgba(226,232,240,0.9)',
-                                padding: '7px 10px',
-                                borderRadius: '6px'
-                              }}
-                            >
-                              <span style={{ color: '#ef4444', fontWeight: 800 }}>•</span>
-                              <span>{ev}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions summary */}
-                    <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <h4 style={{ margin: 0, borderBottom: '1px solid rgba(0,0,0,0.08)', paddingBottom: '10px', fontSize: '1em', color: '#0f172a', fontWeight: 700 }}>
-                        Advisor Instructions
-                      </h4>
-                      <div style={{ background: 'rgba(59,130,246,0.08)', borderLeft: '3px solid #3b82f6', padding: '10px 12px', borderRadius: '0 6px 6px 0' }}>
-                        <p style={{ fontSize: '0.88em', color: '#1e293b', margin: 0, fontWeight: 600, lineHeight: 1.4 }}>
-                          {deviceData.maintenance?.recommended_action}
-                        </p>
-                      </div>
-                      <button
-                        className="primary"
-                        style={{ fontSize: '0.85em', fontWeight: 700, padding: '10px 14px', marginTop: '4px' }}
-                        onClick={() => triggerAutoAdvisor(deviceData.device_id)}
-                      >
-                        Consult AI Adviser
-                      </button>
-                    </div>
-
-                  </div>
-
-                  {/* Right Side: Components list & SHAP */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                    {/* Components breakdown */}
-                    <div className="glass-card">
-                      <h3 style={{ margin: '0 0 15px 0' }}>Component Condition Map</h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
-                        {Object.entries(deviceData.components || {}).map(([comp_name, comp_score]) => (
-                          <div
-                            key={comp_name}
-                            className="glass-card"
-                            style={{
-                              padding: '15px',
-                              cursor: 'pointer',
-                              border: selectedComponent === comp_name ? `1px solid ${getHealthColor(comp_score)}` : '1px solid rgba(255,255,255,0.05)'
-                            }}
-                            onClick={() => setSelectedComponent(comp_name)}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.85em', color: '#94a3b8', fontWeight: 500 }}>{comp_name}</span>
-                              {comp_name.toLowerCase() === 'battery' && <Battery size={16} color={getHealthColor(comp_score)} />}
-                              {comp_name.toLowerCase().includes('temp') && <Thermometer size={16} color={getHealthColor(comp_score)} />}
-                            </div>
-                            <div style={{ fontSize: '1.6em', fontWeight: 700, margin: '8px 0 3px 0', color: getHealthColor(comp_score) }}>
-                              {comp_score}%
-                            </div>
-                            <div style={{ fontSize: '0.7em', color: '#64748b' }}>Click to view details</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Component Inspector Panel */}
-                    {selectedComponent && deviceData.component_details?.[selectedComponent] && (
-                      <div className="glass-card" style={{ border: `1px solid ${getHealthColor(deviceData.components[selectedComponent])}` }}>
-                        <h4 style={{ margin: '0 0 10px 0', color: getHealthColor(deviceData.components[selectedComponent]) }}>
-                          Inspector: {selectedComponent} Health ({deviceData.components[selectedComponent]}%)
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {deviceData.component_details[selectedComponent].evidence.map((ev, i) => (
-                            <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '0.85em', background: 'rgba(15,23,42,0.4)', padding: '8px 12px', borderRadius: '6px' }}>
-                              <Info size={16} color="#6366f1" style={{ flexShrink: 0 }} />
-                              <span>{ev}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Local SHAP contributions */}
-                    <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '22px', borderRadius: '14px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f5f9', paddingBottom: '14px', marginBottom: '18px' }}>
-                        <div>
-                          <h3 style={{ margin: '0 0 3px 0', color: '#030712', fontSize: '1.1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            🤖 AI Predictive Risk Drivers (XAI Feature Analysis)
-                          </h3>
-                          <p style={{ margin: 0, fontSize: '0.82em', color: '#64748b', fontWeight: 500 }}>
-                            Real-time feature impact score on machine health and failure probability
-                          </p>
-                        </div>
-                        <span style={{ fontSize: '0.75em', fontWeight: 800, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '4px 10px', borderRadius: '6px' }}>
-                          SHAP ENGINE v2.4
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        {deviceData.explanation?.map((item, idx) => {
-                          const isRiskIncrease = item.shap_value > 0;
-                          const impactPct = Math.min(100, Math.round(Math.abs(item.shap_value) * 12));
-                          const cleanName = item.feature.replace(/_/g, ' ');
-
-                          return (
-                            <div
-                              key={idx}
-                              style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '8px',
-                                background: isRiskIncrease ? '#fff5f5' : '#f0fdf4',
-                                padding: '14px 18px',
-                                borderRadius: '10px',
-                                border: `1px solid ${isRiskIncrease ? '#fecaca' : '#bbf7d0'}`,
-                                borderLeft: `5px solid ${isRiskIncrease ? '#e11d48' : '#16a34a'}`
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                  <div style={{ fontWeight: 800, color: '#030712', fontSize: '0.95em' }}>{cleanName}</div>
-                                  <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '1px' }}>
-                                    {isRiskIncrease ? '⚠️ High Impact Failure Indicator' : '🛡️ Favorable Operational Condition'}
-                                  </div>
-                                </div>
-
-                                <span
-                                  style={{
-                                    color: isRiskIncrease ? '#9f1239' : '#14532d',
-                                    fontWeight: 800,
-                                    fontSize: '0.85em',
-                                    background: isRiskIncrease ? '#ffe4e6' : '#dcfce7',
-                                    border: `1px solid ${isRiskIncrease ? '#fda4af' : '#86efac'}`,
-                                    padding: '4px 12px',
-                                    borderRadius: '20px',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                  }}
-                                >
-                                  {isRiskIncrease ? `🚨 +${impactPct}% Risk Factor` : `✔ +${impactPct}% Health Boost`}
-                                </span>
-                              </div>
-
-                              {/* Meter Progress Bar */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-                                <div style={{ flex: 1, height: '10px', background: isRiskIncrease ? '#fecaca' : '#e2e8f0', borderRadius: '5px', overflow: 'hidden' }}>
-                                  <div
-                                    style={{
-                                      width: `${Math.min(100, Math.max(10, impactPct))}%`,
-                                      height: '100%',
-                                      background: isRiskIncrease ? 'linear-gradient(90deg, #f97316, #e11d48)' : 'linear-gradient(90deg, #16a34a, #059669)',
-                                      borderRadius: '5px'
-                                    }}
-                                  />
-                                </div>
-                                <span style={{ fontSize: '0.8em', fontWeight: 800, color: isRiskIncrease ? '#e11d48' : '#16a34a', minWidth: '45px', textAlign: 'right' }}>
-                                  {impactPct}%
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          </div>
+          <DigitalTwinView
+            deviceList={deviceList}
+            selectedDeviceId={selectedDeviceId}
+            setSelectedDeviceId={setSelectedDeviceId}
+            twinInputId={twinInputId}
+            setTwinInputId={setTwinInputId}
+            fetchDeviceDetails={fetchDeviceDetails}
+            loading={loading}
+            error={error}
+            deviceData={deviceData}
+            getHealthColor={getHealthColor}
+            getRiskBadge={getRiskBadge}
+            triggerAutoAdvisor={triggerAutoAdvisor}
+            selectedComponent={selectedComponent}
+            setSelectedComponent={setSelectedComponent}
+          />
         )}
 
-        {/* HOSPITAL HEATMAP */}
         {activeTab === 'heatmap' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '2em' }}>Hospital Department Risk Heatmap</h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Fleet operational status grouped by physical locations</p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-              {departments.map(dept => (
-                <div key={dept.name} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <h3 style={{ margin: 0 }}>{dept.name}</h3>
-                      <span style={{ fontSize: '0.85em', color: '#64748b' }}>{dept.device_count} total devices</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.4em', fontWeight: 700, color: getHealthColor(dept.avg_health) }}>{dept.avg_health}%</div>
-                      <div style={{ fontSize: '0.7em', color: '#64748b' }}>AVG HEALTH</div>
-                    </div>
-                  </div>
-
-                  {/* Risk breakdown numbers */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(15,23,42,0.4)', padding: '10px', borderRadius: '8px', fontSize: '0.85em' }}>
-                    <span style={{ color: '#ef4444' }}>CRIT: {dept.critical_count}</span>
-                    <span style={{ color: '#f97316' }}>HIGH: {dept.high_count}</span>
-                    <span style={{ color: '#f59e0b' }}>MED: {dept.medium_count}</span>
-                    <span style={{ color: '#10b981' }}>LOW: {dept.low_count}</span>
-                  </div>
-
-                  {/* Device list in department */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                    {dept.devices.slice(0, 10).map(d => (
-                      <div
-                        key={d.device_id}
-                        style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85em', background: 'rgba(255,255,255,0.02)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
-                        onClick={() => {
-                          setSelectedDeviceId(d.device_id);
-                          setActiveTab('twin');
-                        }}
-                      >
-                        <span style={{ fontWeight: 600 }}>{d.device_id}</span>
-                        <span style={{ color: '#94a3b8' }}>{d.device_type}</span>
-                        <span>{getRiskBadge(d.risk_level)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <HospitalRiskHeatmap
+            departments={departments}
+            getHealthColor={getHealthColor}
+            getRiskBadge={getRiskBadge}
+            setSelectedDeviceId={setSelectedDeviceId}
+            setActiveTab={setActiveTab}
+          />
         )}
 
-        {/* HOSPITAL MACHINE FAILURE PREDICTION & ML TRAINER (Unified Tab) */}
         {(activeTab === 'prediction' || activeTab === 'rul') && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '2em', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Brain size={30} color="#3b82f6" />
-                Hospital Machine Failure ML Predictor & Trainer
-              </h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>
-                Upload custom medical equipment datasets (Recalls, Manufacturers, Products & Telemetry), train machine learning algorithms (Random Forest, CatBoost, Logistic Regression, SVM), analyze model performance matrices, and execute real-time machine failure risk predictions.
-              </p>
-            </div>
-
-            {/* SECTION 1: DATASET UPLOAD & PROCESSING */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Upload size={20} color="#60a5fa" />
-                  1. Medical Equipment Datasets Ingestion (CSV / XLSX / XLS)
-                </h3>
-                <button
-                  className="primary"
-                  style={{ fontSize: '0.82em', padding: '8px 14px', background: 'rgba(59,130,246,0.2)', border: '1px solid #3b82f6', color: '#60a5fa' }}
-                  onClick={handleRunCustomTraining}
-                  disabled={isRetrainingCustom}
-                >
-                  {isRetrainingCustom ? '⏳ Ingesting Datasets...' : '⚡ Ingest & Train Archive (24) Datasets'}
-                </button>
-              </div>
-
-              {/* 3 Upload Boxes matching user screenshots */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px' }}>
-                {/* File 1: Recalls & Safety Actions */}
-                <div style={{ background: 'rgba(15,23,42,0.6)', border: '2px dashed rgba(59,130,246,0.3)', borderRadius: '10px', padding: '16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.85em', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>File 1: Field Safety Actions & Recalls</div>
-                  <div style={{ fontSize: '0.75em', color: '#94a3b8', marginBottom: '12px' }}>Columns: action, country, device_id, reason, risk_class, status, uid...</div>
-                  <input
-                    type="file"
-                    accept=".csv, .xlsx, .xls"
-                    style={{ display: 'none' }}
-                    id="custom-file-1"
-                    onChange={(e) => handleCustomFileChange(e, 1)}
-                  />
-                  <label htmlFor="custom-file-1" style={{ display: 'inline-block', background: '#1e293b', border: '1px solid #3b82f6', color: '#60a5fa', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8em', fontWeight: 600 }}>
-                    {customFile1 ? `✓ ${customFile1.name}` : '📁 Upload File 1 (CSV/XLS)'}
-                  </label>
-                </div>
-
-                {/* File 2: Manufacturers & Companies */}
-                <div style={{ background: 'rgba(15,23,42,0.6)', border: '2px dashed rgba(59,130,246,0.3)', borderRadius: '10px', padding: '16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.85em', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>File 2: Manufacturers & Parent Companies</div>
-                  <div style={{ fontSize: '0.75em', color: '#94a3b8', marginBottom: '12px' }}>Columns: name, parent_company, representative, slug, source...</div>
-                  <input
-                    type="file"
-                    accept=".csv, .xlsx, .xls"
-                    style={{ display: 'none' }}
-                    id="custom-file-2"
-                    onChange={(e) => handleCustomFileChange(e, 2)}
-                  />
-                  <label htmlFor="custom-file-2" style={{ display: 'inline-block', background: '#1e293b', border: '1px solid #3b82f6', color: '#60a5fa', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8em', fontWeight: 600 }}>
-                    {customFile2 ? `✓ ${customFile2.name}` : '📁 Upload File 2 (CSV/XLS)'}
-                  </label>
-                </div>
-
-                {/* File 3: Medical Products & Telemetry */}
-                <div style={{ background: 'rgba(15,23,42,0.6)', border: '2px dashed rgba(59,130,246,0.3)', borderRadius: '10px', padding: '16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.85em', fontWeight: 700, color: '#f8fafc', marginBottom: '4px' }}>File 3: Products & Telemetry Signals</div>
-                  <div style={{ fontSize: '0.75em', color: '#94a3b8', marginBottom: '12px' }}>Columns: classification, code, description, risk_class, quantity, health...</div>
-                  <input
-                    type="file"
-                    accept=".csv, .xlsx, .xls"
-                    style={{ display: 'none' }}
-                    id="custom-file-3"
-                    onChange={(e) => handleCustomFileChange(e, 3)}
-                  />
-                  <label htmlFor="custom-file-3" style={{ display: 'inline-block', background: '#1e293b', border: '1px solid #3b82f6', color: '#60a5fa', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8em', fontWeight: 600 }}>
-                    {customFile3 ? `✓ ${customFile3.name}` : '📁 Upload File 3 (CSV/XLS)'}
-                  </label>
-                </div>
-              </div>
-
-              {/* Parsed Summary Box */}
-              {!uploadedDatasetSummary ? (
-                <div style={{ background: 'rgba(30,41,59,0.5)', borderRadius: '8px', padding: '24px', textAlign: 'center', border: '1px dashed rgba(59,130,246,0.3)' }}>
-                  <Upload size={32} color="#60a5fa" style={{ marginBottom: '10px' }} />
-                  <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '1em', marginBottom: '4px' }}>No Active Dataset Summary Ingested</div>
-                  <div style={{ fontSize: '0.82em', color: '#94a3b8' }}>
-                    Upload File 1, File 2, or File 3 above, or click <strong>"⚡ Ingest & Train Archive (24) Datasets"</strong> to parse and train on the <code>C:\Users\Dhamodaran G\Downloads\archive (24)</code> dataset.
-                  </div>
-                </div>
-              ) : (
-                <div style={{ background: 'rgba(30,41,59,0.7)', borderRadius: '8px', padding: '16px', border: '1px solid rgba(59,130,246,0.2)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontWeight: 700, color: '#60a5fa', fontSize: '0.9em' }}>📊 Active Dataset Schema & Ingestion Summary</span>
-                    <span style={{ fontSize: '0.8em', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '3px 10px', borderRadius: '4px', fontWeight: 600 }}>
-                      Target Column: Hospital Machine Failure Status
-                    </span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '12px', fontSize: '0.85em' }}>
-                    <div><span style={{ color: '#94a3b8' }}>Total Devices / Rows:</span> <strong>{uploadedDatasetSummary.total_rows}</strong></div>
-                    <div><span style={{ color: '#94a3b8' }}>Engineered Features:</span> <strong>{uploadedDatasetSummary.feature_count} columns</strong></div>
-                    <div><span style={{ color: '#94a3b8' }}>Missing Values:</span> <strong>{uploadedDatasetSummary.missing_pct}%</strong></div>
-                    <div><span style={{ color: '#94a3b8' }}>Status:</span> <strong style={{ color: '#34d399' }}>Ready for ML Training</strong></div>
-                  </div>
-
-                  {/* Sample Preview Table */}
-                  <div style={{ overflowX: 'auto', fontSize: '0.78em' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', color: '#cbd5e1' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', textAlign: 'left' }}>
-                          <th style={{ padding: '6px' }}>Record ID</th>
-                          <th style={{ padding: '6px' }}>Product / Equipment Name</th>
-                          <th style={{ padding: '6px' }}>Classification</th>
-                          <th style={{ padding: '6px' }}>Manufacturer</th>
-                          <th style={{ padding: '6px' }}>Country / Source</th>
-                          <th style={{ padding: '6px' }}>Event / Safety Signal</th>
-                          <th style={{ padding: '6px' }}>Target: Failure Risk</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {uploadedDatasetSummary.preview_rows?.map((row, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                            <td style={{ padding: '6px', fontWeight: 600, color: '#60a5fa' }}>{row.record_id || row.device_id || `REC-${idx + 1}`}</td>
-                            <td style={{ padding: '6px' }}>{row.product_name || row.device_type}</td>
-                            <td style={{ padding: '6px' }}>{row.classification || row.risk_class}</td>
-                            <td style={{ padding: '6px' }}>{row.manufacturer}</td>
-                            <td style={{ padding: '6px' }}>{row.country || 'Global'}</td>
-                            <td style={{ padding: '6px', color: (row.event_type?.includes('Recall') || row.error_code !== 'OK') ? '#f87171' : '#34d399' }}>{row.event_type || row.error_code}</td>
-                            <td style={{ padding: '6px' }}>{getRiskBadge(row.risk_level)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* SECTION 2: ML MODEL TRAINING & MULTI-ALGORITHM PERFORMANCE MATRIX */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Cpu size={20} color="#a855f7" />
-                  2. ML Model Training & Performance Prediction Matrix
-                </h3>
-                <div>
-                  <button
-                    className="primary"
-                    style={{ padding: '10px 22px', fontSize: '0.9em', fontWeight: 700, background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', boxShadow: '0 4px 15px rgba(59,130,246,0.3)', cursor: 'pointer' }}
-                    onClick={handleRunCustomTraining}
-                    disabled={isRetrainingCustom}
-                  >
-                    {isRetrainingCustom ? '⏳ Training Multi-Algorithm Models...' : '🚀 Train Machine Failure Model'}
-                  </button>
-                </div>
-              </div>
-
-              {isRetrainingCustom && (
-                <div style={{ padding: '20px', background: 'rgba(59,130,246,0.1)', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ color: '#60a5fa', fontWeight: 600, marginBottom: '8px' }}>Training Multi-Algorithm Models (Random Forest, LightGBM, XGBoost, CatBoost, Logistic Regression) on uploaded datasets...</div>
-                  <div style={{ height: '8px', background: '#1e293b', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div className="animate-pulse" style={{ height: '100%', width: '100%', background: 'linear-gradient(90deg, #3b82f6, #a855f7)' }}></div>
-                  </div>
-                </div>
-              )}
-
-              {!customMetrics ? (
-                <div style={{ background: 'rgba(30,41,59,0.5)', borderRadius: '8px', padding: '30px', textAlign: 'center', border: '1px dashed rgba(168,85,247,0.3)' }}>
-                  <Cpu size={36} color="#a855f7" style={{ marginBottom: '10px' }} />
-                  <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '1.05em', marginBottom: '4px' }}>No Model Performance Matrix Computed Yet</div>
-                  <div style={{ fontSize: '0.85em', color: '#94a3b8' }}>
-                    Upload your CSV dataset file(s) in Section 1 and click <strong>"🚀 Train Machine Failure Model"</strong> to execute multi-algorithm training and compute the validation performance matrix.
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Multi-Algorithm Validation Performance Matrix Table (Matching Reference Schema) */}
-                  <div className="glass-card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#ffffff' }}>
-                    <div style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.05em', fontWeight: 800 }}>Validation Performance Matrix</h4>
-                      <span style={{ fontSize: '0.75em', fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '3px 10px', borderRadius: '12px', border: '1px solid #86efac' }}>
-                        ✓ 5 ML Architectures Trained & Evaluated
-                      </span>
-                    </div>
-
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', color: '#0f172a', fontSize: '0.88em' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#ffffff', color: '#475569', fontWeight: 700 }}>
-                            <th style={{ padding: '12px 20px', textAlign: 'left' }}>Model Architecture</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>ROC-AUC</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>PR-AUC</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>Accuracy</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>Precision</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>Recall</th>
-                            <th style={{ padding: '12px 16px', textAlign: 'center' }}>F1-Score</th>
-                            <th style={{ padding: '12px 20px', textAlign: 'center' }}>Train Time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {[...(customMetrics.models_matrix || [])]
-                            .sort((a, b) => (parseFloat(b.roc_auc || 0) + parseFloat(b.pr_auc || 0)) - (parseFloat(a.roc_auc || 0) + parseFloat(a.pr_auc || 0)))
-                            .map((row, idx) => {
-                              const isBest = idx === 0;
-                              return (
-                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: isBest ? '#eff6ff' : '#ffffff', fontWeight: isBest ? 700 : 500 }}>
-                                  <td style={{ padding: '12px 20px', color: isBest ? '#1e3a8a' : '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span>{row.model_name}</span>
-                                    {isBest ? (
-                                      <span style={{ fontSize: '0.7em', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>
-                                        ★ Active Best
-                                      </span>
-                                    ) : (
-                                      <span style={{ fontSize: '0.7em', background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '2px 6px', borderRadius: '8px' }}>
-                                        #{idx + 1} Rank
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: isBest ? 800 : 600 }}>{row.roc_auc}</td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>{row.pr_auc}</td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#16a34a', fontWeight: 700 }}>{row.accuracy}</td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>{row.precision}</td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#2563eb' }}>{row.recall}</td>
-                                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>{row.f1_score}</td>
-                                  <td style={{ padding: '12px 20px', textAlign: 'center', color: '#64748b' }}>{row.train_time}</td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* FDA Class I, II, III Risk Tier Breakdown & Proactive Interventions */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-
-                    {/* FDA Class Risk Tier Distribution */}
-                    <div className="glass-card" style={{ padding: '20px', background: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '16px' }}>
-                        <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          🏥 FDA Risk Classification Breakdown (3 Datasets Model Output)
-                        </h4>
-                        <span style={{ fontSize: '0.75em', fontWeight: 700, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '3px 8px', borderRadius: '6px' }}>
-                          LIVE 3-DATASET ANALYSIS
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85em', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-                            <span>Class III (Critical Life Support Risk)</span>
-                            <span style={{ color: '#ef4444' }}>
-                              {customMetrics.fda_breakdown?.class3_pct || 1.9}% ({(customMetrics.fda_breakdown?.class3_count || 2414).toLocaleString()} devices)
-                            </span>
-                          </div>
-                          <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${customMetrics.fda_breakdown?.class3_pct || 1.9}%`, height: '100%', background: '#ef4444' }}></div>
-                          </div>
-                          <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '2px' }}>Requires immediate inspection & 24-hr Biomedical SLA</div>
-                        </div>
-
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85em', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-                            <span>Class II (Medium-High Operational Risk)</span>
-                            <span style={{ color: '#f97316' }}>
-                              {customMetrics.fda_breakdown?.class2_pct || 21.1}% ({(customMetrics.fda_breakdown?.class2_count || 26371).toLocaleString()} devices)
-                            </span>
-                          </div>
-                          <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${customMetrics.fda_breakdown?.class2_pct || 21.1}%`, height: '100%', background: '#f97316' }}></div>
-                          </div>
-                          <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '2px' }}>Schedule calibration within 7 business days</div>
-                        </div>
-
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85em', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-                            <span>Class I (Low Risk / General Equipment)</span>
-                            <span style={{ color: '#16a34a' }}>
-                              {customMetrics.fda_breakdown?.class1_pct || 77.0}% ({(customMetrics.fda_breakdown?.class1_count || 96184).toLocaleString()} devices)
-                            </span>
-                          </div>
-                          <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${customMetrics.fda_breakdown?.class1_pct || 77.0}%`, height: '100%', background: '#16a34a' }}></div>
-                          </div>
-                          <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '2px' }}>Nominal operational state & routine maintenance</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Proactive Intervention & Preventive Maintenance Work Orders */}
-                    <div className="glass-card" style={{ padding: '20px', background: '#ffffff', border: '1px solid #cbd5e1', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', marginBottom: '16px' }}>
-                        <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          ⚡ Proactive Intervention & Work Order Dispatch
-                        </h4>
-                        <span style={{ fontSize: '0.75em', fontWeight: 700, color: '#16a34a', background: '#dcfce7', border: '1px solid #86efac', padding: '3px 8px', borderRadius: '6px' }}>
-                          PROACTIVE REPAIRS
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.85em' }}>DEV000025 • Critical Battery Degradation</div>
-                            <div style={{ fontSize: '0.75em', color: '#b91c1c' }}>ICU Ward 3 • RUL: 3 Days • Risk: Critical</div>
-                          </div>
-                          <button style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 700, fontSize: '0.78em', cursor: 'pointer' }}>Dispatch Tech</button>
-                        </div>
-
-                        <div style={{ background: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontWeight: 800, color: '#9a3412', fontSize: '0.85em' }}>DEV000001 • Pressure Sensor Calibration</div>
-                            <div style={{ fontSize: '0.75em', color: '#c2410c' }}>Surgical Suite 1 • RUL: 12 Days • Risk: High</div>
-                          </div>
-                          <button style={{ background: '#f97316', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 700, fontSize: '0.78em', cursor: 'pointer' }}>Calibrate</button>
-                        </div>
-
-                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <div style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.85em' }}>DEV000473 • Routine 6-Month Preventative Audit</div>
-                            <div style={{ fontSize: '0.75em', color: '#64748b' }}>Radiology • RUL: 45 Days • Risk: Nominal</div>
-                          </div>
-                          <button style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 700, fontSize: '0.78em', cursor: 'pointer' }}>Schedule</button>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <MachineFailurePredictor
+            handleRunCustomTraining={handleRunCustomTraining}
+            isRetrainingCustom={isRetrainingCustom}
+            customFile1={customFile1}
+            customFile2={customFile2}
+            customFile3={customFile3}
+            handleCustomFileChange={handleCustomFileChange}
+            uploadedDatasetSummary={uploadedDatasetSummary}
+            getRiskBadge={getRiskBadge}
+            customMetrics={customMetrics}
+          />
         )}
 
         {/* ROOT CAUSE GRAPH */}
@@ -3381,189 +2319,30 @@ export default function App() {
             NEW PAGE: Knowledge Base upload
             ========================================== */}
         {activeTab === 'knowledge_base' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '2em' }}>Knowledge Base - Manual Vault</h1>
-              <p style={{ margin: '5px 0 0 0', color: '#94a3b8' }}>Upload maintenance manuals. Each manual is chunked, vector-indexed and accessible only to your hospital ({currentUser?.hospital_id || 'demo-hospital'}).</p>
-            </div>
-
-            {/* Upload Card */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h3 style={{ margin: 0 }}>📄 Upload Service Manual</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.75em', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Device Type</label>
-                  <input type="text" placeholder="e.g. Ventilator" value={kbDeviceType} onChange={e => setKbDeviceType(e.target.value)} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.75em', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Manufacturer</label>
-                  <input type="text" placeholder="e.g. MedStar" value={kbManufacturer} onChange={e => setKbManufacturer(e.target.value)} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.75em', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Version</label>
-                  <input type="text" placeholder="e.g. 2.1" value={kbVersion} onChange={e => setKbVersion(e.target.value)} />
-                </div>
-              </div>
-
-              <div style={{ border: '2px dashed rgba(99,102,241,0.35)', borderRadius: '10px', padding: '24px', textAlign: 'center', background: 'rgba(99,102,241,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                <Upload size={28} color="#6366f1" />
-                <div style={{ fontSize: '0.9em', color: '#94a3b8' }}>Accepts <strong>.txt</strong>, <strong>.pdf</strong>, <strong>.docx</strong>, <strong>.csv</strong></div>
-                <input type="file" id="manualFile" style={{ display: 'none' }} accept=".txt,.pdf,.docx,.doc,.csv" onChange={handleUploadManual} />
-                <button className="primary" onClick={() => { document.getElementById('manualFile').value = ''; document.getElementById('manualFile').click(); }}>
-                  Select & Upload Manual
-                </button>
-                {kbUploadProgress && (
-                  <div style={{
-                    fontSize: '0.85em',
-                    padding: '8px 14px',
-                    borderRadius: '6px',
-                    background: kbUploadProgress.startsWith('✅') ? 'rgba(16,185,129,0.15)'
-                      : kbUploadProgress.startsWith('❌') ? 'rgba(239,68,68,0.15)'
-                        : 'rgba(99,102,241,0.15)',
-                    color: kbUploadProgress.startsWith('✅') ? '#10b981'
-                      : kbUploadProgress.startsWith('❌') ? '#ef4444'
-                        : '#6366f1',
-                    width: '100%'
-                  }}>{kbUploadProgress}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Manuals Database Table */}
-            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0 }}>📚 Manuals Database - Hospital: <span style={{ color: '#6366f1' }}>{currentUser?.hospital_id || 'demo-hospital'}</span></h3>
-                <span style={{ fontSize: '0.8em', color: '#64748b' }}>{knowledgeDocs.length} manual{knowledgeDocs.length !== 1 ? 's' : ''} indexed</span>
-              </div>
-              {knowledgeDocs.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                  <div style={{ fontSize: '2em', marginBottom: '8px' }}>📂</div>
-                  <div>No manuals uploaded yet for <strong>{currentUser?.hospital_id || 'demo-hospital'}</strong>.</div>
-                  <div style={{ fontSize: '0.8em', marginTop: '4px' }}>Upload a .txt, .pdf, or .docx manual above to get started.</div>
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.75em', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>Filename</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>Device Type</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>Manufacturer</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>Version</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'center' }}>Chunks</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>Uploaded</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'left' }}>By</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'center' }}>Status</th>
-                      <th style={{ padding: '12px 20px', textAlign: 'center' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {knowledgeDocs.map(doc => (
-                      <tr key={doc.document_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85em' }}>
-                        <td style={{ padding: '12px 20px' }}>
-                          <div style={{ fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.filename}>📄 {doc.filename}</div>
-                          <div style={{ fontSize: '0.75em', color: '#64748b', fontFamily: 'monospace' }}>{doc.document_id}</div>
-                        </td>
-                        <td style={{ padding: '12px 20px' }}>{doc.device_type || '-'}</td>
-                        <td style={{ padding: '12px 20px' }}>{doc.manufacturer || '-'}</td>
-                        <td style={{ padding: '12px 20px' }}>v{doc.model_version || doc.document_version || '1.0'}</td>
-                        <td style={{ padding: '12px 20px', textAlign: 'center' }}>
-                          <button
-                            style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', padding: '4px 12px', borderRadius: '12px', fontWeight: 700, fontSize: '0.85em', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            onClick={() => fetchDocChunks(doc)}
-                            title="Click to view all segmented text chunks in SQL database"
-                          >
-                            <Eye size={13} /> {doc.chunk_count ?? 0} Chunks
-                          </button>
-                        </td>
-                        <td style={{ padding: '12px 20px', fontSize: '0.8em', color: '#94a3b8' }}>{doc.upload_timestamp ? doc.upload_timestamp.replace('T', ' ').replace('Z', '') : '-'}</td>
-                        <td style={{ padding: '12px 20px' }}>{doc.uploaded_by || '-'}</td>
-                        <td style={{ padding: '12px 20px', textAlign: 'center' }}>
-                          <span style={{
-                            padding: '2px 10px', borderRadius: '12px', fontSize: '0.8em', fontWeight: 600,
-                            background: doc.status === 'enabled' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                            color: doc.status === 'enabled' ? '#10b981' : '#ef4444'
-                          }}>
-                            {doc.status === 'enabled' ? '✅ Active' : '⛔ Disabled'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 20px', textAlign: 'center' }}>
-                          <button
-                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: '#ef4444', fontSize: '0.8em' }}
-                            onClick={() => { if (window.confirm('Delete this manual and all its chunks?')) handleDeleteDoc(doc.document_id); }}
-                          >
-                            🗑 Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* SQL Document Chunks Inspection Viewer */}
-            {selectedDocForChunks && (
-              <div className="glass-card" style={{ border: '1px solid rgba(99,102,241,0.3)', display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(15,23,42,0.95)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px' }}>
-                  <div>
-                    <h3 style={{ margin: 0, color: '#6366f1' }}>🔍 SQL Vector Chunks: {selectedDocForChunks.filename}</h3>
-                    <div style={{ fontSize: '0.75em', color: '#64748b', marginTop: '2px' }}>Document ID: {selectedDocForChunks.document_id} • Device: {selectedDocForChunks.device_type} • Hospital: {selectedDocForChunks.hospital_id}</div>
-                  </div>
-                  <button
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer' }}
-                    onClick={() => setSelectedDocForChunks(null)}
-                  >
-                    ✕ Close Viewer
-                  </button>
-                </div>
-
-                {chunksLoading ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#6366f1' }}>Loading SQL chunks...</div>
-                ) : docChunks.length === 0 ? (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No chunks found for this document.</div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', maxHeight: '320px', overflowY: 'auto' }}>
-                    {docChunks.map((c, idx) => (
-                      <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.85em' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#6366f1', fontWeight: 600 }}>
-                          <span>📌 Chunk #{idx + 1} — {c.section}</span>
-                          <span>Page {c.page}</span>
-                        </div>
-                        <div style={{ color: '#e2e8f0', fontFamily: 'monospace', fontSize: '0.8em', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '4px', whiteSpace: 'pre-wrap', maxHeight: '120px', overflowY: 'auto' }}>
-                          {c.text_content}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* RAG Chat */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '480px' }}>
-              <h3 style={{ margin: '0 0 10px 0' }}>💬 Grounded Knowledge QA — Ask your uploaded manuals</h3>
-              <div className="chat-history" style={{ flex: 1, overflowY: 'auto' }}>
-                {kbChatLog.map((msg, i) => (
-                  <div key={i} className={`message-bubble ${msg.sender}`} style={{ position: 'relative' }}>
-                    <div dangerouslySetInnerHTML={{ __html: msg.text }} />
-                    {msg.rawSource && (
-                      <button
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 8px', fontSize: '0.75em', cursor: 'pointer', marginTop: '8px', borderRadius: '4px' }}
-                        onClick={() => setViewedSourceChunk(msg.rawSource)}
-                      >
-                        📋 View Source Chunk
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {kbChatLoading && <div className="message-bubble advisor">🔍 Searching manual chunks...</div>}
-              </div>
-              <div style={{ display: 'flex', gap: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <input type="text" placeholder="e.g. How to replace the ventilator battery?" value={kbChatInput} onChange={e => setKbChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendKbChatMessage()} style={{ flex: 1 }} />
-                <button className="primary" onClick={sendKbChatMessage} disabled={kbChatLoading}>Query RAG</button>
-              </div>
-            </div>
-          </div>
+          <KnowledgeBase
+            currentUser={currentUser}
+            kbDeviceType={kbDeviceType}
+            setKbDeviceType={setKbDeviceType}
+            kbManufacturer={kbManufacturer}
+            setKbManufacturer={setKbManufacturer}
+            kbVersion={kbVersion}
+            setKbVersion={setKbVersion}
+            handleUploadManual={handleUploadManual}
+            kbUploadProgress={kbUploadProgress}
+            knowledgeDocs={knowledgeDocs}
+            fetchDocChunks={fetchDocChunks}
+            handleDeleteDoc={handleDeleteDoc}
+            selectedDocForChunks={selectedDocForChunks}
+            setSelectedDocForChunks={setSelectedDocForChunks}
+            chunksLoading={chunksLoading}
+            docChunks={docChunks}
+            kbChatLog={kbChatLog}
+            setViewedSourceChunk={setViewedSourceChunk}
+            kbChatLoading={kbChatLoading}
+            kbChatInput={kbChatInput}
+            setKbChatInput={setKbChatInput}
+            sendKbChatMessage={sendKbChatMessage}
+          />
         )}
 
         {/* ==========================================

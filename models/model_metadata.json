@@ -1,6 +1,6 @@
 {
-  "training_date": "2026-08-18 11:19:51.133936",
-  "dataset_version": "DS_336D61DD.csv",
+  "training_date": "2026-08-18 18:02:48.083154",
+  "dataset_version": "DS_2D961FF6.csv",
   "selected_model": "LightGBM",
   "features_list": [
     "device_type",
@@ -37,7 +37,7 @@
       "Precision": 0.8904,
       "Recall": 0.8992,
       "F1-Score": 0.8948,
-      "Train_Time_Sec": 0.12
+      "Train_Time_Sec": 0.09
     },
     {
       "Model": "XGBoost",
@@ -47,7 +47,7 @@
       "Precision": 0.89,
       "Recall": 0.8953,
       "F1-Score": 0.8926,
-      "Train_Time_Sec": 0.27
+      "Train_Time_Sec": 0.24
     },
     {
       "Model": "CatBoost",
@@ -57,7 +57,7 @@
       "Precision": 0.8907,
       "Recall": 0.8854,
       "F1-Score": 0.888,
-      "Train_Time_Sec": 0.38
+      "Train_Time_Sec": 0.29
     },
     {
       "Model": "Random Forest",
@@ -67,7 +67,7 @@
       "Precision": 0.8887,
       "Recall": 0.8992,
       "F1-Score": 0.8939,
-      "Train_Time_Sec": 0.71
+      "Train_Time_Sec": 0.62
     },
     {
       "Model": "Logistic Regression",
@@ -77,7 +77,7 @@
       "Precision": 0.8005,
       "Recall": 0.6502,
       "F1-Score": 0.7176,
-      "Train_Time_Sec": 0.43
+      "Train_Time_Sec": 0.41
     }
   ]
 }
