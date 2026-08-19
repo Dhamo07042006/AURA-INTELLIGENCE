@@ -1,6 +1,6 @@
 {
   "success": true,
-  "training_timestamp": "2026-08-18 23:38:07.839459",
+  "training_timestamp": "2026-08-19 09:40:33.464398",
   "dataset_source": "Merged devices-1681209661 + manufacturers-1681209657 + events-1681209680",
   "total_merged_records": 124969,
   "best_model": "LightGBM",
@@ -13,7 +13,7 @@
       "precision": 0.6966,
       "recall": 0.9693,
       "f1_score": 0.8107,
-      "train_time": "2.39s"
+      "train_time": "0.07s"
     },
     {
       "model_name": "XGBoost",
@@ -23,7 +23,7 @@
       "precision": 0.7078,
       "recall": 0.9399,
       "f1_score": 0.8075,
-      "train_time": "0.12s"
+      "train_time": "0.14s"
     },
     {
       "model_name": "Random Forest",
@@ -33,7 +33,7 @@
       "precision": 0.7178,
       "recall": 0.8998,
       "f1_score": 0.7985,
-      "train_time": "0.47s"
+      "train_time": "0.41s"
     },
     {
       "model_name": "CatBoost",
@@ -43,7 +43,7 @@
       "precision": 0.695,
       "recall": 0.9752,
       "f1_score": 0.8116,
-      "train_time": "0.35s"
+      "train_time": "0.23s"
     },
     {
       "model_name": "Logistic Regression",
@@ -53,7 +53,7 @@
       "precision": 0.6655,
       "recall": 0.8774,
       "f1_score": 0.7569,
-      "train_time": "0.18s"
+      "train_time": "0.13s"
     }
   ],
   "fda_breakdown": {

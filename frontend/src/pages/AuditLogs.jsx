@@ -55,7 +55,7 @@ export default function AuditLogs({ currentUser, auditLogs, auditPage, setAuditP
             {paginatedAuditLogs.map((log, idx) => (
               <tr key={log.audit_id || idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85em' }}>
                 <td style={{ padding: '12px 20px' }}>{log.timestamp}</td>
-                <td style={{ padding: '12px 20px', fontWeight: 600, color: log.username === 'admin' ? '#60a5fa' : '#f8fafc' }}>
+                <td style={{ padding: '12px 20px', fontWeight: 600, color: '#0f172a' }}>
                   {log.username}
                 </td>
                 <td style={{ padding: '12px 20px', fontFamily: 'monospace' }}>{log.action}</td>
